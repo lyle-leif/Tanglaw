@@ -47,7 +47,7 @@ Government medical aid in 2026 is large, split across agencies, paper-based and 
 | G2 | The AI does real work | Tulong explains programs, computes the split, gives reasons and catches an injected instruction |
 | G3 | The chain enforces the rules | Over-cap, over-bill and wrong-signer payments revert on testnet |
 | G4 | Every peso is traceable without exposing patients | Every payment visible on the activity panel and BscScan; no personal data on-chain |
-| G5 | One complete journey works live | One run reaches ₱0 on testnet in under 3 minutes |
+| G5 | One complete journey works live | The live demo reaches ₱0 on testnet and shows the revert in under 1 minute |
 
 **Non-goals**
 
@@ -169,6 +169,8 @@ Bill authenticity and eligibility still rest on the social worker, as today. A f
 
 Demo caps (not real program limits): PhilHealth ₱25,000, DOH MAIFIP ₱60,000, PCSO ₱20,000 per case.
 
+On stage the slot is 5 minutes: a 2-minute pitch, a 1-minute live demo and 2 minutes of Q&A. Step 4 (the flagged memo) appears as a screenshot in the pitch. Steps 1, 3, 5, 6 and 7 are shown live in the demo, with the chat and the cases prepared beforehand. See MIGRATION.md §10.
+
 ---
 
 ## 9. Scope
@@ -191,7 +193,7 @@ Demo caps (not real program limits): PhilHealth ₱25,000, DOH MAIFIP ₱60,000,
 - [ ] Prompt injection flagged and `OverProgramCap` revert shown live
 - [ ] Activity panel shows receipts and budgets with no names
 - [ ] Honesty banner on every screen; "what the chain proves" said in the pitch
-- [ ] 3 clean rehearsals under 3 minutes; backup video recorded
+- [ ] 3 clean rehearsals: pitch under 2:00, demo under 1:00, Q&A drill of 2:00; backup video recorded
 - [ ] README with contract link, how to run, AI disclosure and compliance section
 - [ ] Commits dated Nov 12–13 in a public repo
 
