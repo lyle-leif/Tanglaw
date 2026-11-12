@@ -3,7 +3,7 @@ import { ApiError, GoogleGenAI, type Content, type GenerateContentResponse, type
 import { ProviderError, type CompleteRequest, type Provider, type TMsg, type Turn } from "../types";
 
 // Main provider (free tier). Key: GEMINI_API_KEY from Google AI Studio.
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 let client: GoogleGenAI | null = null;
 
 function toContents(messages: TMsg[]): Content[] {
