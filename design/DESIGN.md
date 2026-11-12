@@ -315,4 +315,4 @@ Tulong always says: "Ang social worker lang ang puwedeng mag-apruba ng tulong." 
 1. **[PENDING]** Approve the live **Draft with Tulong** step in the demo (8-second fallback to the pre-drafted plan)?
 2. Hospital label for the demo: "DOH Hospital · Batangas (demo)" is used here. Keep it generic, or use a fictional name?
 3. Should Ana's chat show a short "Natanggap na ng social worker ang kaso" step when the case is opened, or only "Hinihintay ang apruba"?
-4. Track wording (Payments vs AI Agents) may change the activity page headline; current headline "Every peso, in public." works for both.
+4. Track: Payments (decided Nov 13). The activity page headline "Every peso, in public." stays.

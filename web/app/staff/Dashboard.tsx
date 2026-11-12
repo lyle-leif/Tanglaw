@@ -160,6 +160,13 @@ export function Dashboard({ onUnauthorized }: { onUnauthorized: () => void }) {
     return edited ? { ...u.draft, caseId: c.caseId, lines, totalPhp: planTotal(lines), edited: true } : u.draft;
   }
 
+  // Lets the server copy this transaction's events from its receipt (public RPCs refuse eth_getLogs).
+  async function recordTx(hash: Hash) {
+    await sf("/api/tx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hash }) }).catch(
+      () => {},
+    );
+  }
+
   async function sign() {
     if (!current || !cu || !snap?.vault) return;
     const c = current;
@@ -185,6 +192,7 @@ export function Dashboard({ onUnauthorized }: { onUnauthorized: () => void }) {
       });
       patch(c.caseId, { tx: "pending", txHash });
       const receipt = await pc!.waitForTransactionReceipt({ hash: txHash });
+      await recordTx(txHash);
       if (receipt.status === "success") {
         patch(c.caseId, { tx: "paid", paidLines: plan.lines.map((l) => ({ program: l.program, amountPhp: l.amountPhp })) });
       } else {
@@ -315,6 +323,7 @@ export function Dashboard({ onUnauthorized }: { onUnauthorized: () => void }) {
                 chainId: CHAIN.id,
               });
               const r = await pc!.waitForTransactionReceipt({ hash: h });
+              await recordTx(h);
               if (r.status !== "success") throw new Error("The contract refused to open the case.");
             }}
           />

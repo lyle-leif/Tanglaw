@@ -10,13 +10,13 @@ contract Deploy is Script {
     uint256 constant PESO = 1e11; // demo rate: PHP 1,000,000 = 0.1 tBNB
 
     function run() external returns (TanglawVault vault) {
-        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        require(block.chainid == 97, "Not BSC testnet (chain 97)");
+
+        uint256 pk = readDeployerKey();
         address hospital = vm.envAddress("HOSPITAL_ADDRESS");
         address socialWorker = vm.envAddress("SOCIAL_WORKER_ADDRESS");
         uint256 funding = vm.envOr("VAULT_FUNDING_WEI", uint256(0.02 ether));
         address deployer = vm.addr(pk);
-
-        require(block.chainid == 97, "Not BSC testnet (chain 97)");
 
         vm.startBroadcast(pk);
         vault = new TanglawVault(deployer);
@@ -35,5 +35,14 @@ contract Deploy is Script {
         console2.log("Social worker:", socialWorker);
         console2.log("Hospital:", hospital);
         console2.log("Funded (wei):", funding);
+    }
+
+    function readDeployerKey() private view returns (uint256 pk) {
+        try vm.envBytes32("DEPLOYER_PRIVATE_KEY") returns (bytes32 value) {
+            pk = uint256(value);
+        } catch {
+            revert("Configure DEPLOYER_PRIVATE_KEY in .env");
+        }
+        require(pk > 0 && pk < SECP256K1_ORDER, "Invalid DEPLOYER_PRIVATE_KEY");
     }
 }

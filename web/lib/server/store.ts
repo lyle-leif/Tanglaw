@@ -1,6 +1,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import type { PaymentRow } from "../chain";
 import type { Plan } from "../plan";
 
 // Off-chain demo data: case salts and memos, Tulong's drafts and every plan keyed by its hash.
@@ -20,6 +21,10 @@ interface StoreShape {
   drafts: Record<string, { plan: Plan; provider: string }>; // latest validated Tulong draft per caseId
   plans: Record<string, Plan>; // planHash -> plan JSON
   codes: Record<string, string>; // family case code -> caseId
+  // Contract events copied from the receipts of transactions the app sent. Lets the app work on
+  // public RPCs that refuse eth_getLogs. Each row is decoded from the chain, never typed by a user.
+  openedTx: Record<string, { tx: string; block: string }>; // caseId -> openCase tx
+  paid: Record<string, PaymentRow>; // "tx:logIndex" -> Paid event
 }
 
 const FILE = path.join(process.cwd(), ".data", "store.json");
@@ -32,9 +37,11 @@ function load(): StoreShape {
   try {
     s = JSON.parse(fs.readFileSync(FILE, "utf8")) as StoreShape;
   } catch {
-    s = { cases: {}, drafts: {}, plans: {}, codes: {} };
+    s = { cases: {}, drafts: {}, plans: {}, codes: {}, openedTx: {}, paid: {} };
   }
   s.codes ??= {};
+  s.openedTx ??= {};
+  s.paid ??= {};
   g.__tanglawStore = s;
   return s;
 }
@@ -68,6 +75,17 @@ export const store = {
     const s = load();
     s.drafts[key(caseId)] = { plan, provider };
     s.plans[hash.toLowerCase()] = plan;
+    save();
+  },
+  caseIds: () => Object.entries(load().cases).sort((a, b) => a[1].openedAt - b[1].openedAt).map(([id]) => id),
+  getOpenedTx: (caseId: string) => load().openedTx[key(caseId)],
+  putOpenedTx(caseId: string, tx: string, block: string) {
+    load().openedTx[key(caseId)] = { tx, block };
+    save();
+  },
+  allPaid: () => Object.values(load().paid),
+  putPaid(id: string, row: PaymentRow) {
+    load().paid[id] = row;
     save();
   },
   getPlan: (hash: string) => load().plans[hash.toLowerCase()],

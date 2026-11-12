@@ -11,12 +11,14 @@
 
 ## 0. Build status (handoff)
 
-> Kept current after every milestone so another agent (e.g. Codex) can continue. Last updated: **Nov 12, 2026, night**.
+> Kept current after every milestone so another agent (e.g. Codex) can continue. Last updated: **Nov 13, 2026**.
 
 **Done**
 - Spec, PRD, Google Doc tabs (Concept, Pitch plan, Pitch deck, Study guide) for the 5-minute format (2:00 pitch, 1:00 demo, 2:00 Q&A).
 - `contracts/`: TanglawVault.sol per §5, all 13 tests pass (`cd contracts && npm install && forge test`), Deploy.s.sol (refuses any chain except 97). OpenZeppelin 5 and forge-std come from npm (no submodules). Two extra errors: `CaseExists`, `TransferFailed`. Pays the hospital in one transfer per call, one `Paid` event per line.
 - `.env.example` at the repo root (placeholders only).
+- Deployment configuration reviewed. Git ignores `.env`. The deploy script checks chain 97 before loading the key, validates the key before signing, and logs public deployment details only. Foundry build and all 13 contract tests pass offline.
+- TanglawVault deployed to BSC Testnet on Nov 13 at [`0xeC24720B28af2aA3093Ad4B23A5BF43fC92B060D`](https://testnet.bscscan.com/address/0xeC24720B28af2aA3093Ad4B23A5BF43fC92B060D#code), block `142334801`. Foundry recorded seven successful receipts, including the 0.02 tBNB funding transfer. BscScan verified the source through its Standard JSON Input form and reported matching bytecode and ABI.
 - `ARCHITECTURE.md` at the repo root: parts, users and screens, main flow (Mermaid diagrams), contract, API routes, Tulong, where data lives, security boundaries. Keep it in sync when the design changes.
 - `design/DESIGN.md` (UX spec, every state and error message) and `design/prototype.html` (clickable prototype, published privately at https://claude.ai/artifact/VRFkESYS4fwBmh9MYx5Nx7).
 - Google Doc tab **Screens & buttons** (https://docs.google.com/document/d/1Me1q109FbD0lYM1W5uhyzN1tx6K3Wse45xqNo9IdqdE/edit?tab=t.qt1251vwx8g5): frame sizes, shared elements, and per screen the states, buttons and content. The team may design their own UI from it; if they do, restyle `web/` to match (Figma link or PNGs by screen and state).
@@ -25,32 +27,33 @@
   - `/staff` (Ma'am Liza): **Open a case** form (bill typed by her, optional memo = the attached document; random `caseId`, `caseHash = keccak256(salt ‖ record)`, salt off-chain), **Draft with Tulong**, editable amounts (warn, don't block), **Sign with wallet** (`approveAndPay`, fixed gas `APPROVE_GAS`), refusal decoded by replaying the call; `eth_call` pre-check fallback if MetaMask won't send.
   - `/activity`: `Paid` events, budgets left, BscScan links.
   - Tulong (`web/lib/tulong/`, a separate module inside the app; the app calls only `chat()` / `draft()` via `/api/assistant`): **free tiers**, Gemini first (`GEMINI_API_KEY`, model `gemini-3.6-flash`), Groq fallback (`GROQ_API_KEY`, `openai/gpt-oss-120b`), Claude optional and paid (skipped unless `ANTHROPIC_API_KEY` is set). Order via `TULONG_PROVIDERS`. Provider-neutral tool loop capped at 8 steps; on any provider failure (429, timeout, refusal, malformed reply, step cap, draft failing checks twice) the whole request restarts on the next provider. Read-only tools + `draft_payment_plan`; draft validated in `lib/plan.ts`. Review screen shows which provider drafted. Offline tests with faked Gemini/Groq HTTP responses pass (tool round trips, thought-signature replay, fallback, step cap).
-  - Chain reads (`lib/server/indexer.ts`): incremental `getLogs` from the deploy block, chunked. Vault address + deploy block come from `contracts/broadcast/Deploy.s.sol/97/run-latest.json` or `VAULT_ADDRESS`/`VAULT_DEPLOY_BLOCK`.
-  - Off-chain store: `web/.data/store.json` (gitignored): case salts and memos, family case codes, drafts, plans by hash.
+  - Chain reads (`lib/server/indexer.ts`): numbers (bill, covered, remaining, budgets, social worker) are read live from the contract. Case IDs come from the off-chain store (cases opened in the app; one whose `openCase` was cancelled doesn't exist on-chain and is hidden). Event rows come from **receipts**: after each `openCase` / `approveAndPay` is mined, the staff dashboard posts the tx hash to `POST /api/tx` (staff only), and the server reads that receipt from the chain and saves the vault's `CaseOpened` / `Paid` events in the store. Nothing from the request is saved unless the receipt confirms it (must be a successful call to the vault). An `eth_getLogs` scan still runs when the RPC allows it and is merged without duplicates; when the RPC refuses, the scan switches off for 10 minutes instead of failing the page. Vault address + deploy block come from `contracts/broadcast/Deploy.s.sol/97/run-latest.json` or `VAULT_ADDRESS`/`VAULT_DEPLOY_BLOCK`.
+  - **Why (Nov 13):** every free BSC testnet RPC refuses `eth_getLogs` (bnbchain data-seed: "limit exceeded" even for 50 blocks; drpc free: refused or timeout; publicnode: no answer; Blast: shut down), so the old log-only reader showed "Couldn't read BSC testnet" and staff sign-in returned 503. Verified after the change: the app reads the live vault on testnet (configured, social worker and hospital found, ~2 s first read, ~0.3 s after), and 19 receipt-path checks pass on local Anvil with log scanning blinded (case listed before recording, openedTx filled, cancelled case hidden, two `Paid` rows with times, no duplicates on re-record, budgets live, reverted ₱200,000 tx adds no payment, non-vault and unknown hashes refused, `/api/tx` 401 without sign-in, family view shows ₱0 and 2 payments).
+  - Off-chain store: `web/.data/store.json` (gitignored): case salts and memos, family case codes, drafts, plans by hash, and vault events copied from receipts (`openedTx`, `paid`).
   - **Accounts (Nov 12 night):** home `/` picks the role. **Family** `/family` signs in with the case code (`TGL-XXX-XXX`, made when the social worker opens the case, saved in the phone's localStorage) and sees only their case at `/family/chat` (`/api/family/case` returns no case ID, salt or memo). **Social worker** `/staff` signs a one-time message in MetaMask; `/api/staff/login` verifies the signature, checks the wallet equals the contract's `socialWorker`, and sets an HMAC cookie (8 h, `lib/server/auth.ts`, optional `SESSION_SECRET`). Staff-only APIs return 401 without it. **Public** `/activity` has no sign-in. `/chat` and `/review` redirect to the new paths.
   - **Language:** all UI text is English. Only Tulong's replies follow the family's setting (⚙ in the chat header: Taglish default, English, Filipino), sent as `lang` to `/api/assistant` and applied in `chatSystem(lang)`.
   - Verified (accounts): `next build` clean; 18 end-to-end checks on local Anvil pass (wrong wallet 403, forged signature 401, nonce reuse 400, tampered cookie rejected, staff APIs 401 without session, code issued and family view by code in any letter case, unknown code refused, logout). MetaMask UI clicks not yet tried in a real browser.
   - Verified: `next build` clean; plan validation + contract-simulation checks pass; full flow on a local Anvil chain (chain id 97, unlocked dev accounts, no keys): open 2 cases, Case A paid 25k + 55k → ₱0 (hospital +0.008 tBNB), Case B ₱200,000 mined and reverted `OverProgramCap`, indexer shows all of it.
   - **Live keys (Nov 12):** Groq works (`openai/gpt-oss-120b`). Gemini: AI Studio now issues `AQ.` keys; the owner's first one was rejected (401 `ACCESS_TOKEN_TYPE_UNSUPPORTED`, a known rollout issue), a new key created in a new project works. `gemini-flash-latest` returned 503 (high demand) and `gemini-2.5-flash` is closed to new users, so the default is now `gemini-3.6-flash` (answers in ~2 s; 3.7/3.8 timed out). Set `GEMINI_MODEL=gemini-3.6-flash` in `.env`.
-  - **Not yet verified:** Tulong live against real Gemini/Groq (no keys on this machine; check the default model names still exist in AI Studio / Groq console) and the MetaMask UI flow in a browser.
+  - **Testnet rehearsal passed (Nov 13), owner in a real browser with MetaMask:** staff sign-in; Case A and Case B (demo memo) opened; Tulong drafted both on the live keys (Case B flagged the memo); Ana's chat on a phone over Wi-Fi; Case A paid PhilHealth ₱25,000 + DOH MAIFIP ₱55,000 → ₱0 in one tx ([`0x383f6e7e…c73c`](https://testnet.bscscan.com/tx/0x383f6e7e1cb310487021e94ecf0ee3cd01603016cdfe33467a44ada2f0f6c73c)), hospital +0.008 tBNB; Case B PhilHealth ₱200,000 mined and **reverted** with `OverProgramCap()` (selector `0x64a0f068`, [`0x5f5ef3ca…9df7`](https://testnet.bscscan.com/tx/0x5f5ef3ca9a4e0a4ddb8015564181ff972c2272009c3dd07d4e71173561539df7), status 0, no money moved); `/activity` shows both payments and budgets (PhilHealth ₱475,000, DOH MAIFIP ₱445,000 left). First try at Case A didn't send a tx (popup not confirmed); retry worked.
+  - Phones on the same Wi-Fi: `next.config.ts` sets `allowedDevOrigins` to the laptop's LAN IPv4 addresses (read at start), otherwise Next 16 blocks dev resources from `http://<LAN IP>:3000` and the page half-loads.
 
-**Not committed yet:** `contracts/`, `design/`, `web/`, `.env.example`, `.gitignore`, and this section. The repo owner commits; never add AI co-author lines (§12).
+**Not committed yet:** the Nov 13 changes (deploy script hardening, receipt-based chain reads, `/api/tx`, `allowedDevOrigins`, track decision, docs). The repo owner commits; never add AI co-author lines (§12).
 
 **Next, in order**
-1. Owner deploys from their own laptop: fill `.env`, then `forge script script/Deploy.s.sol:Deploy --rpc-url bsc_testnet --broadcast --verify -vvvv` from `contracts/` (see `contracts/README.md`). Never handle the private key. The web app picks up the vault address from the broadcast file.
-2. Verification: `foundry.toml` uses the Etherscan V2 API (`api.etherscan.io/v2/api?chainid=97`). `BSCSCAN_API_KEY` must hold an **Etherscan** API key (etherscan.io account), not a BscScan V1 key. **Checked Nov 12:** the owner's key is accepted but the Etherscan free plan answers "Free API access is not supported for this chain" for chain 97, so `--verify` will fail. Deploy without `--verify`; verify later via Sourcify (`forge verify-contract --verifier sourcify`) or a paid plan.
-3. Owner adds `GEMINI_API_KEY` and `GROQ_API_KEY` (both free) and a random `SESSION_SECRET` to `.env`, runs `cd web && npm install && npm run dev`, and does the demo setup in `web/README.md` (sign in on `/staff`, open Case A and Case B with the demo memo, draft both, enter Case A's family code on `/family` and preload the chat).
-4. Full testnet run: Case A → ₱0, then Case B PhilHealth ₱200,000 → refused on-chain. Check MetaMask lets the fixed-gas tx through; if not, the pre-check fallback shows the error. Check Tulong flags the memo on Case B, on Gemini and on Groq (set `TULONG_PROVIDERS=groq` once to test the fallback alone).
-5. Screenshots for the deck, backup video, README (§11) with the vault address and BscScan link.
-6. Later (owner said "later"): deploy to Vercel. The JSON store and in-memory nonces won't survive serverless; move them to a free database (e.g. Vercel KV / Upstash / Supabase) and set `SESSION_SECRET`, `VAULT_ADDRESS`, `VAULT_DEPLOY_BLOCK` there.
+1. ~~Demo setup and full testnet run~~ done Nov 13 (see above). For the stage demo, open two **fresh** cases (A and B are now used up) and pre-draft them. Optional: test Groq alone once with `TULONG_PROVIDERS=groq`.
+2. Demo day: run the production server (`cd web && npm run build && npm start`) so no page compiles on stage.
+3. Owner picks the edge features to build next (ideas: printable receipt for the family, hospital view, budget-low warning, paid/refused counter on `/activity`).
+4. Screenshots for the deck, backup video, README (§11) with the vault address and BscScan link.
+5. Later (owner said "later"): deploy to Vercel. The JSON store and in-memory nonces won't survive serverless; move them to a free database (e.g. Vercel KV / Upstash / Supabase) and set `SESSION_SECRET`, `VAULT_ADDRESS`, `VAULT_DEPLOY_BLOCK` there.
+
+**Decided Nov 13:** hackathon track is **Payments** (the on-chain payment and the on-chain refusal are the core; Tulong is the edge, and it has no wallet by design). Google Doc updated. No code change.
 
 **Decided Nov 12 (late), waiting for the owner's go before coding**
 - **QR code:** ONE static QR (poster at the social service desk or a slide) that opens `/family`; the family then types the case code. No per-case QR. Plan: add a printable poster page. Needs a fixed URL, so it comes after Vercel (for rehearsal on Wi-Fi: `http://<laptop LAN IP>:3000/family`).
 - **Vercel-ready changes:** move `web/.data/store.json` to a free database (Upstash Redis via Vercel Marketplace; keep the file store locally, switch when its env vars are set); make staff sign-in nonces work across serverless instances (store them in the database, or make them stateless with an HMAC); rate-limit wrong case-code tries (e.g. 10 a minute); `SESSION_SECRET` required on Vercel; Vercel root directory `web`; set `VAULT_ADDRESS`/`VAULT_DEPLOY_BLOCK` and the keys in Vercel env; add a Vercel checklist to `web/README.md`.
-- After deploy: verify the contract for free via Sourcify.
 
 **Open decisions (owner)**
-- Track: Payments (recommended) or AI Agents. Pitch and docs name it once chosen.
 - Optional: show the family code as a QR code on the staff screen (not built).
 - Live "Draft with Tulong" during the 1-minute demo, or pre-drafted (the app supports both; pre-drafted is safer for time).
 - Tulong: free tiers only for now (Gemini → Groq). Claude stays an optional provider if API credits appear.
@@ -58,12 +61,13 @@
 
 **Gotchas**
 - `forge` lives in `~/.foundry/bin`; add it to PATH in each terminal.
-- Windows + Git Bash environment; the repo is in OneDrive.
-- `web/` reads only whitelisted keys from the root `.env` (`next.config.ts`); it never loads `DEPLOYER_PRIVATE_KEY`. Restart the app after editing `.env`.
+- Windows + Git Bash environment. Use a local checkout outside OneDrive for credentials.
+- `web/next.config.ts` reads the root `.env` and exports only allowlisted settings to the web process environment. The allowlist excludes `DEPLOYER_PRIVATE_KEY`. Restart the app after editing `.env`.
 - The family chat history is kept in the browser (localStorage), per case code; ⚙ → **Clear conversation** resets it for rehearsals, **Leave case** signs the phone out.
 - Without `SESSION_SECRET`, the staff cookie is signed with a random secret made at start, so a restart signs the social worker out.
 - Signing in on a phone needs the MetaMask app's built-in browser; the family screen works in any browser.
-- BSC testnet public RPC limits `getLogs` ranges; the indexer halves the chunk on errors. If reads are slow, set `VAULT_DEPLOY_BLOCK`.
+- Free BSC testnet RPCs refuse `eth_getLogs`, so the app relies on receipts posted to `/api/tx`. A case or payment made **outside the app** (e.g. `cast send`) won't appear in lists unless its hash is posted to `/api/tx`; its numbers on-chain are still correct. Deleting `web/.data/store.json` hides past rows (the chain still has them). A paid RPC with `eth_getLogs` (set `BSC_TESTNET_RPC`) brings back the full scan automatically.
+- The public testnet RPC suggested a 1 wei tip, which the node rejected. Deployment succeeded with `--legacy --with-gas-price 1gwei`.
 ---
  
 ## 1. What we are building (one paragraph)

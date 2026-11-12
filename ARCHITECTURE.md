@@ -124,7 +124,7 @@ web/
 │   ├── family.ts                Family code + language saved in the browser
 │   ├── server/auth.ts           Staff sign-in: nonces, signed cookie
 │   ├── server/store.ts          Off-chain JSON store
-│   ├── server/indexer.ts        Reads contract events and state
+│   ├── server/indexer.ts        Reads contract state; events from tx receipts (+ log scan if the RPC allows)
 │   ├── server/config.ts         Vault address + deploy block
 │   └── tulong/                  The AI module (below)
 └── components/                  Header, icons
@@ -141,6 +141,7 @@ web/
 | `GET /api/staff/nonce`, `POST /api/staff/login`, `POST /api/staff/logout`, `GET /api/staff/me` | staff | Sign-in |
 | `POST /api/cases`, `GET /api/cases` | staff | Save case salt + memo, create family code; list codes |
 | `GET /api/plans?caseId=` / `?hash=` / `POST` | staff / public by hash | Stored plans |
+| `POST /api/tx` | staff | After a signed tx is mined: reads its receipt from the chain and saves the vault's events (free RPCs refuse `eth_getLogs`) |
 
 Staff-only routes return 401 without the sign-in cookie.
 
@@ -170,6 +171,7 @@ flowchart LR
 | Case ID (random), `caseHash`, bill, hospital, payments, program budgets | Blockchain | Yes |
 | `planHash` (fingerprint of the approved plan) | Blockchain | Yes |
 | Case salt, memo, family code, Tulong's drafts, plans by hash | `web/.data/store.json` (gitignored) | No |
+| Copies of `CaseOpened` / `Paid` events, decoded from tx receipts | `web/.data/store.json` | The same data is public on-chain |
 | Ana's chat history, family code, language | Ana's browser (localStorage) | No |
 | Staff session | Signed cookie in Ma'am Liza's browser | No |
 | API keys, deployer key | `.env` on the owner's laptop (gitignored) | No |
@@ -182,7 +184,7 @@ flowchart LR
 - Money can only go to the case's allowlisted hospital.
 - Tulong can't sign, can't hold funds, and can't change the bill.
 - The website never sees a private key. MetaMask signs; the server only verifies signatures.
-- `web/` loads only whitelisted keys from `.env` and never reads `DEPLOYER_PRIVATE_KEY`.
+- `web/next.config.ts` reads the root `.env` and exports only allowlisted settings to the web process environment. The allowlist excludes `DEPLOYER_PRIVATE_KEY`.
 - Testnet only (chain 97). No real money.
 
 ## 9. Running it
@@ -190,7 +192,7 @@ flowchart LR
 | Where | Now | Later |
 |---|---|---|
 | Website | `cd web && npm run dev` on the laptop → `http://localhost:3000`, phones on the same Wi-Fi via the laptop's IP | Vercel (needs a small database instead of the JSON file) |
-| Contract | `forge script script/Deploy.s.sol:Deploy --rpc-url bsc_testnet --broadcast` from `contracts/` | Same contract, verified via Sourcify |
+| Contract | `forge script contracts/script/Deploy.s.sol:Deploy --root contracts --rpc-url bsc_testnet --broadcast` from the repo root | Deployed Nov 13 at `0xeC24720B28af2aA3093Ad4B23A5BF43fC92B060D` (block 142334801), source verified on BscScan |
 | AI | Free tiers: Gemini + Groq keys in `.env` | Same |
 
 Details: `web/README.md`, `contracts/README.md`, `MIGRATION.md` §0.

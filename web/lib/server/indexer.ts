@@ -1,39 +1,63 @@
 import "server-only";
-import { createPublicClient, http, type Log, type PublicClient } from "viem";
+import { createPublicClient, http, parseEventLogs, type Log, type PublicClient } from "viem";
 import { CHAIN, VAULT_ABI, type CaseState, type ChainSnapshot, type PaymentRow, type ProgramState } from "../chain";
 import { weiToPeso } from "../peso";
 import { PROGRAMS } from "../rules";
 import { getConfig } from "./config";
 import { store } from "./store";
 
-// Reads the vault's events (incrementally, in block chunks) and its current state.
-// Everything shown in the app comes from the chain; nothing here can write to it.
+// Reads the vault's state and events. Nothing here can write to the chain.
+//
+// Events come from two places, merged:
+// 1. Receipts of the transactions the app sent (recordTx). Works on every RPC.
+// 2. An eth_getLogs scan, when the RPC allows it. The free BSC testnet RPCs refuse it
+//    ("limit exceeded"), so a refusal switches the scan off for a while instead of failing the page.
+// Case IDs also come from the off-chain store, and every number shown (bill, covered, remaining,
+// budgets) is read live from the contract.
 
 const EVENTS = VAULT_ABI.filter(
   (x) => x.type === "event" && ["CaseOpened", "Paid", "HospitalSet", "SocialWorkerSet"].includes(x.name),
 );
 const LOOKBACK_IF_UNKNOWN = 50_000n; // used only if the deploy block is unknown
+const LOGS_RETRY_MS = 10 * 60_000;
 
 interface IndexState {
   vault: string;
   next: bigint; // next block to scan
-  opened: { caseId: `0x${string}`; hospital: `0x${string}`; tx: string }[];
-  paid: PaymentRow[];
+  opened: { caseId: `0x${string}`; tx: string; block: bigint }[];
+  paid: (PaymentRow & { key: string })[];
   hospitals: Map<string, boolean>;
-  blockTimes: Map<string, number>;
+  logsOffUntil: number;
 }
 
 let client: PublicClient | null = null;
-// Index shared by every route bundle in this server process
-const g = globalThis as unknown as { __tanglawIdx?: IndexState | null; __tanglawScan?: Promise<void> | null };
-let idx: IndexState | null = g.__tanglawIdx ?? null;
+// Shared by every route bundle in this server process
+const g = globalThis as unknown as {
+  __tanglawIdx?: IndexState | null;
+  __tanglawScan?: Promise<void> | null;
+  __tanglawTimes?: Map<string, number>;
+};
+const blockTimes = (g.__tanglawTimes ??= new Map());
 
 function getClient(rpc: string) {
-  if (!client) client = createPublicClient({ chain: CHAIN, transport: http(rpc, { retryCount: 2 }) }) as PublicClient;
+  if (!client) client = createPublicClient({ chain: CHAIN, transport: http(rpc, { retryCount: 1 }) }) as PublicClient;
   return client;
 }
 
+async function blockTime(c: PublicClient, block: string): Promise<number | null> {
+  const t = blockTimes.get(block);
+  if (t !== undefined) return t;
+  try {
+    const b = await c.getBlock({ blockNumber: BigInt(block) });
+    blockTimes.set(block, Number(b.timestamp));
+    return Number(b.timestamp);
+  } catch {
+    return null;
+  }
+}
+
 async function scan(c: PublicClient, s: IndexState) {
+  if (Date.now() < s.logsOffUntil) return;
   const latest = await c.getBlockNumber();
   let chunk = 5_000n;
   while (s.next <= latest) {
@@ -41,20 +65,22 @@ async function scan(c: PublicClient, s: IndexState) {
     let logs: Log[];
     try {
       logs = await c.getLogs({ address: s.vault as `0x${string}`, events: EVENTS, fromBlock: s.next, toBlock: to });
-    } catch (e) {
-      if (chunk > 200n) {
-        chunk /= 2n; // the public RPC limits the range; retry smaller
+    } catch {
+      if (chunk > 500n) {
+        chunk /= 4n; // some RPCs limit the range; retry smaller
         continue;
       }
-      throw e;
+      s.logsOffUntil = Date.now() + LOGS_RETRY_MS; // this RPC refuses logs; rely on receipts
+      return;
     }
     for (const raw of logs) {
       const log = raw as Log & { eventName: string; args: Record<string, unknown> };
       const tx = log.transactionHash ?? "";
       if (log.eventName === "CaseOpened") {
-        s.opened.push({ caseId: log.args.caseId as `0x${string}`, hospital: log.args.hospital as `0x${string}`, tx });
+        s.opened.push({ caseId: log.args.caseId as `0x${string}`, tx, block: log.blockNumber ?? 0n });
       } else if (log.eventName === "Paid") {
         s.paid.push({
+          key: `${tx}:${log.logIndex}`,
           caseId: log.args.caseId as `0x${string}`,
           programId: Number(log.args.programId),
           amountPhp: weiToPeso(log.args.amount as bigint),
@@ -69,17 +95,45 @@ async function scan(c: PublicClient, s: IndexState) {
     }
     s.next = to + 1n;
   }
-  // Block times for receipts (few rows, cached)
-  for (const p of s.paid) {
-    if (p.time !== null) continue;
-    let t = s.blockTimes.get(p.block);
-    if (t === undefined) {
-      const b = await c.getBlock({ blockNumber: BigInt(p.block) });
-      t = Number(b.timestamp);
-      s.blockTimes.set(p.block, t);
-    }
-    p.time = t;
+}
+
+/**
+ * Copies the vault's events from one transaction's receipt into the store. The hash comes from
+ * the browser, but everything saved is decoded from the chain: a receipt that isn't a successful
+ * call to this vault saves nothing.
+ */
+export async function recordTx(hash: `0x${string}`): Promise<{ ok: boolean; error?: string }> {
+  const cfg = getConfig();
+  if (!cfg.vault) return { ok: false, error: "No vault address yet." };
+  const c = getClient(cfg.rpc);
+  let receipt;
+  try {
+    receipt = await c.waitForTransactionReceipt({ hash, timeout: 30_000 });
+  } catch {
+    return { ok: false, error: "Couldn't get the receipt for this transaction." };
   }
+  if (receipt.to?.toLowerCase() !== cfg.vault.toLowerCase()) return { ok: false, error: "Not a vault transaction." };
+  if (receipt.status !== "success") return { ok: true }; // reverted: nothing happened on-chain
+  const vaultLogs = receipt.logs.filter((l) => l.address.toLowerCase() === cfg.vault!.toLowerCase());
+  const block = String(receipt.blockNumber);
+  const time = await blockTime(c, block);
+  for (const ev of parseEventLogs({ abi: VAULT_ABI, logs: vaultLogs })) {
+    const e = ev as unknown as { eventName: string; args: Record<string, unknown>; logIndex: number };
+    if (e.eventName === "CaseOpened") {
+      store.putOpenedTx(e.args.caseId as string, hash, block);
+    } else if (e.eventName === "Paid") {
+      store.putPaid(`${hash}:${e.logIndex}`, {
+        caseId: e.args.caseId as `0x${string}`,
+        programId: Number(e.args.programId),
+        amountPhp: weiToPeso(e.args.amount as bigint),
+        planHash: e.args.planHash as string,
+        tx: hash,
+        block,
+        time,
+      });
+    }
+  }
+  return { ok: true };
 }
 
 export async function snapshot(): Promise<ChainSnapshot> {
@@ -99,15 +153,15 @@ export async function snapshot(): Promise<ChainSnapshot> {
 
   const c = getClient(cfg.rpc);
   try {
-    idx = g.__tanglawIdx ?? null;
-    if (!idx || idx.vault !== cfg.vault) {
+    let s = g.__tanglawIdx ?? null;
+    if (!s || s.vault !== cfg.vault) {
       const start = cfg.deployBlock ?? (await c.getBlockNumber()) - LOOKBACK_IF_UNKNOWN;
-      idx = { vault: cfg.vault, next: start, opened: [], paid: [], hospitals: new Map(), blockTimes: new Map() };
-      g.__tanglawIdx = idx;
+      s = { vault: cfg.vault, next: start, opened: [], paid: [], hospitals: new Map(), logsOffUntil: 0 };
+      g.__tanglawIdx = s;
     }
-    const s = idx;
+    const st = s;
     // one scan at a time across all route bundles, so logs are never added twice
-    if (!g.__tanglawScan) g.__tanglawScan = scan(c, s).finally(() => (g.__tanglawScan = null));
+    if (!g.__tanglawScan) g.__tanglawScan = scan(c, st).catch(() => {}).finally(() => (g.__tanglawScan = null));
     await g.__tanglawScan;
 
     const v = cfg.vault;
@@ -127,43 +181,60 @@ export async function snapshot(): Promise<ChainSnapshot> {
       active: r[3],
     }));
 
-    const cases: CaseState[] = await Promise.all(
-      s.opened.map(async (o, i) => {
+    // Candidate cases: opened through this app (store), then any others seen in logs.
+    const fromLogs = new Map(st.opened.map((o) => [o.caseId.toLowerCase(), o]));
+    const ids = [...new Set([...store.caseIds(), ...[...fromLogs.keys()]])];
+    const rows = await Promise.all(
+      ids.map(async (id) => {
         const [cs, ...paid] = await Promise.all([
-          read<readonly [string, `0x${string}`, bigint, bigint, boolean]>("cases", [o.caseId]),
-          ...PROGRAMS.map((p) => read<bigint>("paidByProgram", [o.caseId, p.id])),
+          read<readonly [string, `0x${string}`, bigint, bigint, boolean]>("cases", [id]),
+          ...PROGRAMS.map((p) => read<bigint>("paidByProgram", [id, p.id])),
         ]);
-        const bill = weiToPeso(cs[2]);
-        const covered = weiToPeso(cs[3]);
+        return { id, cs, paid };
+      }),
+    );
+    // A case saved off-chain whose openCase was cancelled or failed doesn't exist on-chain: skip it.
+    const cases: CaseState[] = rows
+      .filter((r) => r.cs[4])
+      .map((r, i) => {
+        const bill = weiToPeso(r.cs[2]);
+        const covered = weiToPeso(r.cs[3]);
         return {
-          caseId: o.caseId,
+          caseId: (fromLogs.get(r.id)?.caseId ?? r.id) as `0x${string}`,
           label: "Case " + (i < 26 ? String.fromCharCode(65 + i) : i + 1),
-          hospital: cs[1],
+          hospital: r.cs[1],
           billPhp: bill,
           coveredPhp: covered,
           remainingPhp: bill - covered,
-          paidByProgram: Object.fromEntries(PROGRAMS.map((p, j) => [p.id, weiToPeso(paid[j])])),
-          hasMemo: Boolean(store.getCase(o.caseId)?.memo),
-          openedTx: o.tx,
+          paidByProgram: Object.fromEntries(PROGRAMS.map((p, j) => [p.id, weiToPeso(r.paid[j])])),
+          hasMemo: Boolean(store.getCase(r.id)?.memo),
+          openedTx: store.getOpenedTx(r.id)?.tx ?? fromLogs.get(r.id)?.tx ?? "",
         };
-      }),
+      });
+
+    // Payments: receipts recorded by the app, plus any from logs, without duplicates.
+    const byKey = new Map<string, PaymentRow>();
+    for (const p of st.paid) byKey.set(`${p.tx.toLowerCase()}:${p.programId}:${p.caseId.toLowerCase()}`, p);
+    for (const p of store.allPaid()) byKey.set(`${p.tx.toLowerCase()}:${p.programId}:${p.caseId.toLowerCase()}`, p);
+    const payments = await Promise.all(
+      [...byKey.values()].map(async ({ caseId, programId, amountPhp, planHash, tx, block, time }) => ({
+        caseId,
+        programId,
+        amountPhp,
+        planHash,
+        tx,
+        block,
+        time: time ?? (await blockTime(c, block)),
+      })),
     );
+    payments.sort((a, b) => Number(BigInt(b.block) - BigInt(a.block))); // newest first
 
+    const envHospital = process.env.HOSPITAL_ADDRESS as `0x${string}` | undefined;
     const hospital =
-      ([...s.hospitals.entries()].filter(([, ok]) => ok).map(([a]) => a).pop() as `0x${string}` | undefined) ??
-      ((process.env.HOSPITAL_ADDRESS as `0x${string}` | undefined) || null);
+      ([...st.hospitals.entries()].filter(([, ok]) => ok).map(([a]) => a).pop() as `0x${string}` | undefined) ??
+      (envHospital && (await read<boolean>("isHospital", [envHospital])) ? envHospital : null);
 
-    return {
-      configured: true,
-      vault: v,
-      socialWorker: sw,
-      hospital,
-      hospitalLabel: cfg.hospitalLabel,
-      paused,
-      programs,
-      cases,
-      payments: [...s.paid].reverse(), // newest first
-    };
+    return { configured: true, vault: v, socialWorker: sw, hospital, hospitalLabel: cfg.hospitalLabel, paused, programs, cases, payments };
   } catch (e) {
     return { ...empty, vault: cfg.vault, error: "Couldn't read BSC testnet: " + (e as Error).message.split("\n")[0] };
   }
