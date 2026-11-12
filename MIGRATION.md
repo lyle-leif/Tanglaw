@@ -44,6 +44,11 @@
 5. Screenshots for the deck, backup video, README (§11) with the vault address and BscScan link.
 6. Later (owner said "later"): deploy to Vercel. The JSON store and in-memory nonces won't survive serverless; move them to a free database (e.g. Vercel KV / Upstash / Supabase) and set `SESSION_SECRET`, `VAULT_ADDRESS`, `VAULT_DEPLOY_BLOCK` there.
 
+**Decided Nov 12 (late), waiting for the owner's go before coding**
+- **QR code:** ONE static QR (poster at the social service desk or a slide) that opens `/family`; the family then types the case code. No per-case QR. Plan: add a printable poster page. Needs a fixed URL, so it comes after Vercel (for rehearsal on Wi-Fi: `http://<laptop LAN IP>:3000/family`).
+- **Vercel-ready changes:** move `web/.data/store.json` to a free database (Upstash Redis via Vercel Marketplace; keep the file store locally, switch when its env vars are set); make staff sign-in nonces work across serverless instances (store them in the database, or make them stateless with an HMAC); rate-limit wrong case-code tries (e.g. 10 a minute); `SESSION_SECRET` required on Vercel; Vercel root directory `web`; set `VAULT_ADDRESS`/`VAULT_DEPLOY_BLOCK` and the keys in Vercel env; add a Vercel checklist to `web/README.md`.
+- After deploy: verify the contract for free via Sourcify.
+
 **Open decisions (owner)**
 - Track: Payments (recommended) or AI Agents. Pitch and docs name it once chosen.
 - Optional: show the family code as a QR code on the staff screen (not built).
