@@ -18,8 +18,8 @@ const ALLOWED = [
   "VAULT_ADDRESS",
   "NEXT_PUBLIC_VAULT_ADDRESS",
   "VAULT_DEPLOY_BLOCK",
-  "HOSPITAL_ADDRESS",
-  "HOSPITAL_LABEL",
+  "SCHOOL_ADDRESS",
+  "SCHOOL_LABEL",
   "SESSION_SECRET",
 ];
 try {
@@ -46,7 +46,10 @@ const nextConfig: NextConfig = {
   // Old prototype paths -> the new per-user screens
   async redirects() {
     return [
-      { source: "/chat", destination: "/family/chat", permanent: false },
+      { source: "/chat", destination: "/student/chat", permanent: false },
+      // Hospital-theme paths -> campus theme
+      { source: "/family", destination: "/student", permanent: false },
+      { source: "/family/:path*", destination: "/student/:path*", permanent: false },
       { source: "/review", destination: "/staff", permanent: false },
     ];
   },

@@ -1,6 +1,6 @@
 "use client";
 
-// The family's session lives only in their browser: the case code they typed and the
+// The student's session lives only in their browser: the case code they typed and the
 // language they want Tulong to reply in. No account data is stored on a server.
 
 export type ReplyLang = "taglish" | "english" | "filipino";
@@ -11,8 +11,8 @@ export const LANGS: { id: ReplyLang; label: string; sample: string }[] = [
   { id: "filipino", label: "Filipino", sample: "“May mga programang maaaring tumulong po.”" },
 ];
 
-const CODE_KEY = "tanglaw.family.code";
-const LANG_KEY = "tanglaw.family.lang";
+const CODE_KEY = "tanglaw.student.code";
+const LANG_KEY = "tanglaw.student.lang";
 
 function get(k: string): string | null {
   try {
@@ -28,15 +28,15 @@ function set(k: string, v: string | null) {
   } catch {}
 }
 
-export const familyCode = {
+export const studentCode = {
   get: () => get(CODE_KEY),
   set: (c: string) => set(CODE_KEY, c),
   clear: () => set(CODE_KEY, null),
 };
 
 // Optional first name, only for Tulong's greeting. Stays on this phone: never sent to the server or the AI.
-const NAME_KEY = "tanglaw.family.name";
-export const familyName = {
+const NAME_KEY = "tanglaw.student.name";
+export const studentName = {
   get: () => (get(NAME_KEY) ?? "").trim(),
   set: (n: string) => set(NAME_KEY, n.trim().slice(0, 40) || null),
   clear: () => set(NAME_KEY, null),

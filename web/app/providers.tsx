@@ -7,7 +7,7 @@ import { createConfig, http, WagmiProvider } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { CHAIN, FALLBACK_RPC } from "@/lib/chain";
 
-// MetaMask (injected) on BSC testnet only. The wallet belongs to the social worker;
+// MetaMask (injected) on BSC testnet only. The wallet belongs to the scholarship officer;
 // the app never holds a key.
 export const wagmiConfig = createConfig({
   chains: [CHAIN],

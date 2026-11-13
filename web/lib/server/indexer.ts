@@ -35,7 +35,7 @@ import { store } from "./store";
 // budgets) is read live from the contract.
 
 const EVENTS = VAULT_ABI.filter(
-  (x) => x.type === "event" && ["CaseOpened", "Paid", "HospitalSet", "SocialWorkerSet"].includes(x.name),
+  (x) => x.type === "event" && ["CaseOpened", "Paid", "SchoolSet", "OfficerSet"].includes(x.name),
 );
 const LOOKBACK_IF_UNKNOWN = 50_000n; // used only if the deploy block is unknown
 const LOGS_RETRY_MS = 10 * 60_000;
@@ -45,7 +45,7 @@ interface IndexState {
   next: bigint; // next block to scan
   opened: { caseId: `0x${string}`; tx: string; block: bigint }[];
   paid: (PaymentRow & { key: string })[];
-  hospitals: Map<string, boolean>;
+  schools: Map<string, boolean>;
   logsOffUntil: number;
 }
 
@@ -108,8 +108,8 @@ async function scan(c: PublicClient, s: IndexState) {
           block: String(log.blockNumber),
           time: null,
         });
-      } else if (log.eventName === "HospitalSet") {
-        s.hospitals.set((log.args.hospital as string).toLowerCase(), Boolean(log.args.ok));
+      } else if (log.eventName === "SchoolSet") {
+        s.schools.set((log.args.school as string).toLowerCase(), Boolean(log.args.ok));
       }
     }
     s.next = to + 1n;
@@ -210,9 +210,9 @@ export async function snapshot(): Promise<ChainSnapshot> {
   const empty: ChainSnapshot = {
     configured: false,
     vault: cfg.vault,
-    socialWorker: null,
-    hospital: null,
-    hospitalLabel: cfg.hospitalLabel,
+    officer: null,
+    school: null,
+    schoolLabel: cfg.schoolLabel,
     paused: false,
     programs: PROGRAMS.map((p) => ({ id: p.id, name: p.name, capPhp: p.capPhp, budgetLeftPhp: p.budgetPhp, active: true })),
     cases: [],
@@ -226,7 +226,7 @@ export async function snapshot(): Promise<ChainSnapshot> {
     let s = g.__tanglawIdx ?? null;
     if (!s || s.vault !== cfg.vault) {
       const start = cfg.deployBlock ?? (await c.getBlockNumber()) - LOOKBACK_IF_UNKNOWN;
-      s = { vault: cfg.vault, next: start, opened: [], paid: [], hospitals: new Map(), logsOffUntil: 0 };
+      s = { vault: cfg.vault, next: start, opened: [], paid: [], schools: new Map(), logsOffUntil: 0 };
       g.__tanglawIdx = s;
     }
     const st = s;
@@ -239,7 +239,7 @@ export async function snapshot(): Promise<ChainSnapshot> {
       c.readContract({ address: v, abi: VAULT_ABI, functionName, args } as never) as Promise<T>;
 
     const [sw, paused, progRaw] = await Promise.all([
-      read<`0x${string}`>("socialWorker"),
+      read<`0x${string}`>("officer"),
       read<boolean>("paused"),
       Promise.all(PROGRAMS.map((p) => read<readonly [string, bigint, bigint, boolean]>("programs", [p.id]))),
     ]);
@@ -272,7 +272,7 @@ export async function snapshot(): Promise<ChainSnapshot> {
         return {
           caseId: (fromLogs.get(r.id)?.caseId ?? r.id) as `0x${string}`,
           label: "Case " + (i < 26 ? String.fromCharCode(65 + i) : i + 1),
-          hospital: r.cs[1],
+          school: r.cs[1],
           billPhp: bill,
           coveredPhp: covered,
           remainingPhp: bill - covered,
@@ -299,10 +299,10 @@ export async function snapshot(): Promise<ChainSnapshot> {
     );
     payments.sort((a, b) => Number(BigInt(b.block) - BigInt(a.block))); // newest first
 
-    const envHospital = process.env.HOSPITAL_ADDRESS as `0x${string}` | undefined;
-    const hospital =
-      ([...st.hospitals.entries()].filter(([, ok]) => ok).map(([a]) => a).pop() as `0x${string}` | undefined) ??
-      (envHospital && (await read<boolean>("isHospital", [envHospital])) ? envHospital : null);
+    const envSchool = process.env.SCHOOL_ADDRESS as `0x${string}` | undefined;
+    const school =
+      ([...st.schools.entries()].filter(([, ok]) => ok).map(([a]) => a).pop() as `0x${string}` | undefined) ??
+      (envSchool && (await read<boolean>("isSchool", [envSchool])) ? envSchool : null);
 
     const refusals: RefusalRow[] = store
       .allRefused()
@@ -312,9 +312,9 @@ export async function snapshot(): Promise<ChainSnapshot> {
     return {
       configured: true,
       vault: v,
-      socialWorker: sw,
-      hospital,
-      hospitalLabel: cfg.hospitalLabel,
+      officer: sw,
+      school,
+      schoolLabel: cfg.schoolLabel,
       paused,
       programs,
       cases,

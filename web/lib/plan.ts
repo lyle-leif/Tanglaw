@@ -14,7 +14,7 @@ export interface Plan {
   lines: PlanLine[];
   totalPhp: number;
   warnings: string[];
-  edited?: boolean; // true once the social worker changes an amount
+  edited?: boolean; // true once the scholarship officer changes an amount
 }
 
 /** JSON with sorted keys, so the same plan always gives the same hash. */
@@ -44,18 +44,17 @@ export function planTotal(lines: { amountPhp: number }[]): number {
   return lines.reduce((a, l) => a + (Number(l.amountPhp) || 0), 0);
 }
 
-// No names, diagnoses or medical details anywhere in the plan (MIGRATION.md §5 decision 6).
-// The demo stores no patient name, so this is a denylist of the demo story's names and
-// common diagnosis words, plus "no wallet addresses in the reasons".
+// No names, student numbers or grades anywhere in the plan (MIGRATION.md §5 decision 6).
+// The demo stores no student name, so this is a denylist of the demo story's names and
+// common academic-record words, plus a check for student-number-like digits.
 const PERSONAL = [
-  "rosa", "lola", "ana", "mama", "nanay",
-  "cancer", "stroke", "dengue", "pneumonia", "diabetes", "tuberculosis", "tb", "kidney",
-  "dialysis", "leukemia", "hypertension", "heart attack", "covid", "fracture", "sepsis",
+  "maria", "mama", "nanay", "tatay",
+  "gpa", "gwa", "failed", "failing", "dropped", "probation", "transcript",
 ];
 
 export function containsPersonalData(text: string): string | null {
   for (const w of PERSONAL) if (new RegExp(`\\b${w}\\b`, "i").test(text)) return w;
-  if (/\bdiagnos/i.test(text)) return "diagnosis";
+  if (/\b\d{4}-\d{4,6}\b/.test(text)) return "student number";
   return null;
 }
 
@@ -82,14 +81,14 @@ export function validateDraft(plan: Plan, c: CaseState, programs: ProgramState[]
     if (!(l.source in SOURCES)) errs.push(`${p.name}: unknown rule source "${l.source}".`);
     if (/0x[0-9a-fA-F]{6,}/.test(l.reason)) errs.push(`${p.name}: the reason contains an address.`);
     const pd = containsPersonalData(l.reason);
-    if (pd) errs.push(`${p.name}: the reason contains personal or medical details ("${pd}").`);
+    if (pd) errs.push(`${p.name}: the reason contains personal or academic details ("${pd}").`);
   }
   const total = planTotal(plan.lines);
   if (total !== plan.totalPhp) errs.push(`totalPhp ${plan.totalPhp} doesn't match the lines (${total}).`);
   if (total > c.remainingPhp) errs.push(`Total ${total} is above the remaining balance of ${c.remainingPhp}.`);
   for (const w of plan.warnings ?? []) {
     const pd = containsPersonalData(w);
-    if (pd) errs.push(`A warning contains personal or medical details ("${pd}").`);
+    if (pd) errs.push(`A warning contains personal or academic details ("${pd}").`);
   }
   return errs;
 }

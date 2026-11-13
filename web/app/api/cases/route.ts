@@ -4,8 +4,8 @@ import { z } from "zod";
 import { getStaff, notStaff } from "@/lib/server/auth";
 import { store } from "@/lib/server/store";
 
-// Off-chain part of a case (social worker only): the random salt behind caseHash, the memo
-// attached to the bill, and the family's case code. Called just before she signs openCase.
+// Off-chain part of a case (scholarship officer only): the random salt behind caseHash, the memo
+// attached to the bill, and the student's case code. Called just before she signs openCase.
 export const dynamic = "force-dynamic";
 
 const hex32 = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ code });
 }
 
-/** caseId -> family code, for the staff dashboard */
+/** caseId -> student code, for the staff dashboard */
 export async function GET() {
   if (!(await getStaff())) return notStaff();
   return NextResponse.json({ codes: store.allCodes() });

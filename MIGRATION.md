@@ -14,6 +14,8 @@
 > Kept current after every milestone so another agent (e.g. Codex) can continue. Last updated: **Nov 13, 2026**.
 
 **Done**
+- Scenario-based stage revision in [Canva](https://www.canva.com/d/wmRq8W4Qz5h8kqr) and the [Ana’s case script tab](https://docs.google.com/document/d/1Me1q109FbD0lYM1W5uhyzN1tx6K3Wse45xqNo9IdqdE/edit?tab=t.7s8hbg8giunc). Six slides open with Ana’s ₱80,000 question and lead into a demo that ends on the mined BscScan refusal. Target finish is 2:56, pending a timed rehearsal.
+- Six-slide Payments pitch created in [Canva](https://www.canva.com/d/Zqz23b5TCs57uT8). The [stage script tab](https://docs.google.com/document/d/1Me1q109FbD0lYM1W5uhyzN1tx6K3Wse45xqNo9IdqdE/edit?tab=t.ubdath7l41ex) contains the two-minute pitch, one-minute demo cues, backup recording plan, and judge Q&A.
 - Spec, PRD, Google Doc tabs (Concept, Pitch plan, Pitch deck, Study guide) for the 5-minute format (2:00 pitch, 1:00 demo, 2:00 Q&A).
 - `contracts/`: TanglawVault.sol per §5, all 13 tests pass (`cd contracts && npm install && forge test`), Deploy.s.sol (refuses any chain except 97). OpenZeppelin 5 and forge-std come from npm (no submodules). Two extra errors: `CaseExists`, `TransferFailed`. Pays the hospital in one transfer per call, one `Paid` event per line.
 - `.env.example` at the repo root (placeholders only).
@@ -56,9 +58,44 @@
   - Checked in the browser: home, family code, chat (empty, conversation, tracker, paid card via a mocked case response), settings, public record, staff sign-in. `tsc` and `next build` clean. Receipt checked with live data after the RPC fallback. **Not seen yet:** the signed-in staff dashboard (needs MetaMask).
   - RPC fallback: on Nov 13 afternoon `data-seed-prebsc-1-s1.bnbchain.org` (the `.env` RPC and wagmi's default) timed out. Server (`lib/server/indexer.ts`) and browser (`app/providers.tsx`) now use viem `fallback()`: main RPC first, then `FALLBACK_RPC` = `https://bsc-testnet-rpc.publicnode.com` (`lib/chain.ts`), 8 s timeout each. Verified: `/api/family/case` and the receipt (plan matches) load again.
 
+- **Campus theme (Nov 13, evening), owner's decision "Option B": content + contract rename.** The pitch is now **stacked scholarships paid straight to the school**. One student, several programs, one assessment. The contract stops double-funding (`OverBill`) and ghost payees (allowlisted school only). The logic is unchanged; only names, content and seeded programs changed. **This overrides the hospital story in the rest of this file and in PRD.md, ARCHITECTURE.md and design/DESIGN.md, which are not rewritten yet.**
+  - Contract renames:
+    - `hospital` → `school`; `isSchool`, `setSchool`, `SchoolSet`, `UnknownSchool`.
+    - `socialWorker` → `officer`; `setOfficer`, `OfficerSet`, `NotOfficer`, `onlyOfficer`.
+    - Deploy env: `SCHOOL_ADDRESS`, `OFFICER_ADDRESS`. Web env: `SCHOOL_LABEL` (default "State University · Cashier (demo)").
+  - Seeded programs (simulated, ₱500,000 budget each): 0 CHED TES cap ₱20,000, 1 City Scholarship cap ₱10,000, 2 Alumni Grant cap ₱15,000, per student per term. Priority order: TES → City → Alumni.
+  - Tests: **14/14 pass**, including new `test_14_DemoCaseBDoubleFundingRefused`. Demo numbers: ₱38,000 assessment.
+  - Web:
+    - `/family` → `/student` (and `/api/family` → `/api/student`), with redirects from `/family` in `next.config.ts`.
+    - `lib/family.ts` → `lib/student.ts`; localStorage keys are now `tanglaw.student.*`.
+    - New rules and docs in `lib/rules.ts`. New source keys: `rules.ched-tes.case-cap`, `rules.city-scholarship.case-cap`, `rules.alumni-grant.case-cap`, `rules.total.not-over-assessment`, `rules.payee.school-only`, `rules.approval.officer`.
+    - Tulong's prompts are now the campus scholarship desk.
+    - The personal-data denylist in `lib/plan.ts` now covers names, academic-record words and student-number patterns.
+    - Home hero: "Scholarships, paid straight."
+  - Docs updated: readme.md, contracts/README.md, web/README.md, WALLET_SETUP.md, .env.example.
+  - Verified: `forge test` 14/14; `tsc` and `next build` clean.
+  - **Not done yet:**
+    - The app no longer works against the old hospital vault `0xeC24…060D`, because it now calls `officer()` and `isSchool()`. The owner must redeploy (below).
+    - The old Case A/B rehearsal links are hospital-era.
+    - **Campus vault runs (Nov 13), owner with MetaMask on vault `0x936622Ab…c84c`:** Case A paid CHED TES ₱20,000 + City Scholarship ₱10,000 + Alumni Grant ₱8,000 → ₱0 ([`0x461bb2ba…8960`](https://testnet.bscscan.com/tx/0x461bb2bae66a1cf49a69a9177d197ebff901228c82ff7f0f5a95908bd75b8960)); the demo-video case paid the same plan ([`0x883c1e39…b8cf`](https://testnet.bscscan.com/tx/0x883c1e390d58dace9933885f4303eea2af16548129c5636af92cb7c349ceb8cf)); one refusal recorded with `OverProgramCap` ([`0x704604b9…fad1`](https://testnet.bscscan.com/tx/0x704604b9413db8430cc8b6eee9059b20f319194dcfb5272a003cc25aab00fad1)). The scripted `OverBill` Case B refusal was not run. Links are from the app's store; not re-checked on BscScan.
+    - **Staff plan view:** once a case is paid, the over-room warnings are hidden and the pill reads "Signed by the officer" (`web/app/staff/Dashboard.tsx`).
+    - **Store:** `web/.data/store.json` is tagged with its vault; rows from another vault are archived on load (`web/lib/server/store.ts`).
+    - **Pitch:** 8-slide deck in [Canva](https://www.canva.com/d/pc9bGE3ApVowchB) (plain type, campus story); 64 s demo cut from the owner's screen recording, to be placed on the demo slide by the owner. Placeholders left: team names, contact, AI tools named.
+    - **Next:** name the AI tools in the deck and README (organizer checklist); run the `OverBill` Case B if a refusal demo is needed; `next build` before any deploy.
+
 **Not committed yet:** the Nov 13 changes (deploy script hardening, receipt-based chain reads, `/api/tx`, `allowedDevOrigins`, track decision, docs). The repo owner commits; never add AI co-author lines (§12).
 
 **Next, in order**
+0. **Campus redeploy (owner only; agents never touch keys):**
+   1. In `.env`, rename `HOSPITAL_ADDRESS` → `SCHOOL_ADDRESS` and `SOCIAL_WORKER_ADDRESS` → `OFFICER_ADDRESS`. The same wallets are fine. Optionally set `SCHOOL_LABEL`.
+   2. Run `cd contracts && forge script script/Deploy.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast --legacy --with-gas-price 1gwei`, then verify on BscScan.
+   3. Clear or update `VAULT_ADDRESS` / `VAULT_DEPLOY_BLOCK` if they are set. Otherwise the app reads `run-latest.json`.
+   4. Restart the app.
+   5. Rehearse:
+      - **Case A:** ₱38,000 → TES ₱20,000 + City ₱10,000 + Alumni ₱8,000 → ₱0.
+      - **Case B:** ₱38,000 with the demo memo; set Alumni to ₱15,000, total ₱45,000 → refused `OverBill`.
+   6. Put the new address and tx links in readme.md.
+0b. Rewrite PRD.md, ARCHITECTURE.md, design/DESIGN.md and the Google Doc / Canva pitch for the campus story. They still describe the hospital.
 1. ~~Demo setup and full testnet run~~ done Nov 13 (see above). For the stage demo, open two **fresh** cases (A and B are now used up) and pre-draft them. Optional: test Groq alone once with `TULONG_PROVIDERS=groq`.
 2. Demo day: run the production server (`cd web && npm run build && npm start`) so no page compiles on stage.
 3. ~~Edge features~~ refusals counter + receipt with plan check built Nov 13. Skipped on purpose: hospital view, budget-low warning. UI restyle built Nov 13 (see Done).
@@ -75,7 +112,7 @@
 - Optional: show the family code as a QR code on the staff screen (not built).
 - Live "Draft with Tulong" during the 1-minute demo, or pre-drafted (the app supports both; pre-drafted is safer for time).
 - Tulong: free tiers only for now (Gemini → Groq). Claude stays an optional provider if API credits appear.
-- On-screen hospital name: `HOSPITAL_LABEL`, default "DOH Hospital · Batangas (demo)".
+- On-screen school name: `SCHOOL_LABEL`, default "State University · Cashier (demo)".
 
 **Gotchas**
 - `forge` lives in `~/.foundry/bin`; add it to PATH in each terminal.

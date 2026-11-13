@@ -258,7 +258,7 @@ details.proves summary{font-weight:600;cursor:pointer}
 .settings-actions{display:flex;gap:8px;flex-wrap:wrap}
 .settings-actions .btn{height:38px;font-size:14px}
 
-/* Family code shown to the social worker */
+/* Family code shown to the scholarship officer */
 .code-display{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:16px 18px;margin-bottom:16px;border-color:var(--amber);background:var(--amber-wash)}
 .code-big{font-size:30px!important;font-weight:700;letter-spacing:.08em;margin:4px 0}
 .code-actions{display:flex;gap:8px;align-items:center}

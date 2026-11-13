@@ -8,8 +8,8 @@ import { Icon, Lock, Spin } from "@/components/Icons";
 import { short } from "@/lib/peso";
 import { Dashboard } from "./Dashboard";
 
-// Social worker sign-in. She signs a one-time message in MetaMask (free, no transaction);
-// the server checks it came from the contract's registered social worker wallet.
+// Scholarship officer sign-in. She signs a one-time message in MetaMask (free, no transaction);
+// the server checks it came from the contract's registered scholarship officer wallet.
 
 function isUserReject(e: unknown): boolean {
   if (e instanceof BaseError) return !!e.walk((x) => x instanceof UserRejectedRequestError);
@@ -81,7 +81,7 @@ export default function StaffPage() {
       <>
         <div className="staff-bar">
           <span className="muted">
-            Signed in as social worker <b className="mono">{short(session)}</b>
+            Signed in as scholarship officer <b className="mono">{short(session)}</b>
           </span>
           <button className="btn ghost" onClick={signOut}>
             <Icon name="logout" size={16} /> Sign out
@@ -95,9 +95,9 @@ export default function StaffPage() {
   return (
     <div className="gate">
       <div className="card gate-card">
-        <h1>Social worker sign-in</h1>
+        <h1>Scholarship officer sign-in</h1>
         <p className="muted">
-          Sign in with the social worker wallet in MetaMask. Signing the message is free and does not send a transaction.
+          Sign in with the scholarship officer wallet in MetaMask. Signing the message is free and does not send a transaction.
         </p>
 
         {session && wallet && wallet !== session && (
@@ -145,7 +145,7 @@ export default function StaffPage() {
         {connect.error && !isUserReject(connect.error) && <div className="err-bar">{connect.error.message}</div>}
         {err && <div className="err-bar">{err}</div>}
         <p className="hint">
-          <Lock /> Only the wallet registered in the contract as the social worker can sign in. The app never sees your private key.
+          <Lock /> Only the wallet registered in the contract as the scholarship officer can sign in. The app never sees your private key.
         </p>
       </div>
     </div>

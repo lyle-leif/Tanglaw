@@ -5,8 +5,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title TanglawVault
-/// @notice Pays a case's hospital from government aid programs, only within each program's
-///         per-case cap, its budget and the bill. Only the social worker can open cases and
+/// @notice Pays a student case's school from scholarship programs, only within each program's
+///         per-case cap, its budget and the assessment (bill). Only the scholarship officer can open cases and
 ///         approve payments. The AI never signs: it only drafts the plan whose hash is stored here.
 /// @dev Testnet demo. Amounts are in wei (demo rate: 1 peso = 1e11 wei). No personal data is stored.
 contract TanglawVault is Ownable, ReentrancyGuard {
@@ -19,25 +19,25 @@ contract TanglawVault is Ownable, ReentrancyGuard {
 
     struct Case {
         bytes32 caseHash;
-        address hospital;
+        address school;
         uint256 bill;
         uint256 covered;
         bool exists;
     }
 
-    address public socialWorker;
+    address public officer;
     bool public paused;
 
-    mapping(address => bool) public isHospital;
+    mapping(address => bool) public isSchool;
     mapping(uint8 => Program) public programs;
     mapping(bytes32 => Case) public cases;
     mapping(bytes32 => mapping(uint8 => uint256)) public paidByProgram;
 
-    error NotSocialWorker();
+    error NotOfficer();
     error OverProgramCap();
     error OverBudget();
     error OverBill();
-    error UnknownHospital();
+    error UnknownSchool();
     error CaseNotFound();
     error Paused();
     error InactiveProgram();
@@ -46,42 +46,42 @@ contract TanglawVault is Ownable, ReentrancyGuard {
     error CaseExists();
     error TransferFailed();
 
-    event CaseOpened(bytes32 indexed caseId, address indexed hospital, uint256 bill);
+    event CaseOpened(bytes32 indexed caseId, address indexed school, uint256 bill);
     event PlanApproved(bytes32 indexed caseId, bytes32 planHash);
     event Paid(
-        bytes32 indexed caseId, uint8 indexed programId, address indexed hospital, uint256 amount, bytes32 planHash
+        bytes32 indexed caseId, uint8 indexed programId, address indexed school, uint256 amount, bytes32 planHash
     );
     event ProgramSet(uint8 indexed id, string name, uint256 perCaseCap, uint256 budget, bool active);
-    event HospitalSet(address indexed hospital, bool ok);
-    event SocialWorkerSet(address indexed socialWorker);
+    event SchoolSet(address indexed school, bool ok);
+    event OfficerSet(address indexed officer);
     event PausedSet(bool paused);
 
-    modifier onlySocialWorker() {
-        if (msg.sender != socialWorker) revert NotSocialWorker();
+    modifier onlyOfficer() {
+        if (msg.sender != officer) revert NotOfficer();
         _;
     }
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
-    // ---------- Social worker ----------
+    // ---------- Scholarship officer ----------
 
-    /// @notice Opens a case. The bill is entered by the social worker, never by the AI.
-    function openCase(bytes32 caseId, bytes32 caseHash, address hospital, uint256 bill) external onlySocialWorker {
+    /// @notice Opens a case. The assessment (bill) is entered by the officer, never by the AI.
+    function openCase(bytes32 caseId, bytes32 caseHash, address school, uint256 bill) external onlyOfficer {
         if (paused) revert Paused();
-        if (!isHospital[hospital]) revert UnknownHospital();
+        if (!isSchool[school]) revert UnknownSchool();
         if (bill == 0) revert ZeroAmount();
         if (cases[caseId].exists) revert CaseExists();
 
-        cases[caseId] = Case({caseHash: caseHash, hospital: hospital, bill: bill, covered: 0, exists: true});
-        emit CaseOpened(caseId, hospital, bill);
+        cases[caseId] = Case({caseHash: caseHash, school: school, bill: bill, covered: 0, exists: true});
+        emit CaseOpened(caseId, school, bill);
     }
 
-    /// @notice Approves a payment plan and pays the case's hospital, line by line.
+    /// @notice Approves a payment plan and pays the case's school, line by line.
     /// @dev Check order: paused, case exists, arrays; then per line: active, amount > 0,
     ///      per-case cap, budget, bill. State updates per line, before any transfer.
     function approveAndPay(bytes32 caseId, uint8[] calldata programIds, uint256[] calldata amounts, bytes32 planHash)
         external
-        onlySocialWorker
+        onlyOfficer
         nonReentrant
     {
         if (paused) revert Paused();
@@ -107,13 +107,13 @@ contract TanglawVault is Ownable, ReentrancyGuard {
             total += amount;
         }
 
-        address hospital = c.hospital;
+        address school = c.school;
         emit PlanApproved(caseId, planHash);
         for (uint256 i = 0; i < programIds.length; i++) {
-            emit Paid(caseId, programIds[i], hospital, amounts[i], planHash);
+            emit Paid(caseId, programIds[i], school, amounts[i], planHash);
         }
 
-        (bool ok,) = payable(hospital).call{value: total}("");
+        (bool ok,) = payable(school).call{value: total}("");
         if (!ok) revert TransferFailed();
     }
 
@@ -127,14 +127,14 @@ contract TanglawVault is Ownable, ReentrancyGuard {
         emit ProgramSet(id, name, perCaseCap, budget, active);
     }
 
-    function setHospital(address h, bool ok) external onlyOwner {
-        isHospital[h] = ok;
-        emit HospitalSet(h, ok);
+    function setSchool(address h, bool ok) external onlyOwner {
+        isSchool[h] = ok;
+        emit SchoolSet(h, ok);
     }
 
-    function setSocialWorker(address sw) external onlyOwner {
-        socialWorker = sw;
-        emit SocialWorkerSet(sw);
+    function setOfficer(address o) external onlyOwner {
+        officer = o;
+        emit OfficerSet(o);
     }
 
     function setPaused(bool p) external onlyOwner {

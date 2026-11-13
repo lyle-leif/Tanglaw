@@ -14,7 +14,7 @@ import { ProviderError, TulongError, type TMsg } from "./types";
 
 export { TulongError };
 
-// ---------------------------------------------------------------- chat (Ana)
+// ---------------------------------------------------------------- chat (student)
 
 export interface ChatTurn {
   role: "user" | "assistant";
@@ -51,10 +51,10 @@ export async function chat(history: ChatTurn[], code: string, lang: ReplyLang = 
           return { content: JSON.stringify(rulesForModel()) };
         }
         if (call.name === "get_case") {
-          const { snap, c } = await getCaseState(caseId); // only this family's own case
+          const { snap, c } = await getCaseState(caseId); // only this student's own case
           return {
             content: JSON.stringify(
-              c ? caseForModel(c, snap, false) : { status: "No case opened yet. The social worker opens the case after reviewing the bill." },
+              c ? caseForModel(c, snap, false) : { status: "No case opened yet. The scholarship officer opens the case after reviewing the assessment." },
             ),
           };
         }
@@ -126,7 +126,7 @@ export async function draft(caseId: string): Promise<DraftResult> {
           if (++failedChecks >= 2) throw new ProviderError(`${p.label}'s draft failed our checks twice: ${errs[0]}`, p.id);
           return { content: `The plan failed validation: ${errs.join(" ")} Fix it and call draft_payment_plan again.`, isError: true };
         }
-        return { content: "Accepted. The social worker will review it.", final: { plan: plan!, hash: planHash(plan!) } };
+        return { content: "Accepted. The scholarship officer will review it.", final: { plan: plan!, hash: planHash(plan!) } };
       },
     });
     if (!out.final) throw new ProviderError(`${p.label} didn't produce a plan`, p.id);

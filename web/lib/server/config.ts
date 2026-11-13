@@ -10,7 +10,7 @@ export interface VaultConfig {
   vault: `0x${string}` | null;
   deployBlock: bigint | null;
   rpc: string;
-  hospitalLabel: string;
+  schoolLabel: string;
 }
 
 const BROADCAST = path.join(process.cwd(), "..", "contracts", "broadcast", "Deploy.s.sol", "97", "run-latest.json");
@@ -43,6 +43,6 @@ export function getConfig(): VaultConfig {
     vault,
     deployBlock,
     rpc: process.env.BSC_TESTNET_RPC || "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
-    hospitalLabel: process.env.HOSPITAL_LABEL || "DOH Hospital · Batangas (demo)",
+    schoolLabel: process.env.SCHOOL_LABEL || "State University · Cashier (demo)",
   };
 }

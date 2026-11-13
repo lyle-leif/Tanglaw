@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Tanglaw",
-  description: "AI-guided medical aid, paid by a smart contract after a social worker signs. BSC testnet demo.",
+  description: "AI-guided scholarship aid, paid straight to the school by a smart contract after a scholarship officer signs. BSC testnet demo.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

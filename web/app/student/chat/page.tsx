@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Avatar, Icon, Send } from "@/components/Icons";
 import { Tracker } from "@/components/Tracker";
-import { chatKey, familyCode, familyName, LANGS, replyLang, type ReplyLang } from "@/lib/family";
+import { chatKey, studentCode, studentName, LANGS, replyLang, type ReplyLang } from "@/lib/student";
 import { peso } from "@/lib/peso";
 import { consolidatedChecklist, PROGRAMS } from "@/lib/rules";
 
-// Family screen (phone-first). UI is English; only Tulong's replies use the chosen language.
+// Student screen (phone-first). UI is English; only Tulong's replies use the chosen language.
 // No wallet, no crypto words, no refusals: it only changes when a payment succeeds.
 
 type Card = "programs" | "checklist";
@@ -20,26 +20,26 @@ interface Msg {
   cards?: Card[];
   error?: boolean;
 }
-interface FamilyCase {
+interface StudentCase {
   label: string;
   billPhp: number;
   coveredPhp: number;
   remainingPhp: number;
-  hospitalLabel: string;
+  schoolLabel: string;
   payments: { program: string; amountPhp: number; tx: string }[];
 }
 
-// Tulong's first message, in the family's chosen language
+// Tulong's first message, in the student's chosen language
 const GREETING: Record<ReplyLang, string> = {
-  taglish: "Hello po! Ako si Tulong. Ikuwento lang po ninyo ang sitwasyon at ang bill, at sasabihin ko kung anong tulong ang puwede.",
-  english: "Hello po! I'm Tulong. Tell me about the situation and the hospital bill, and I'll tell you what help is available.",
-  filipino: "Magandang araw po! Ako si Tulong. Ikuwento po ninyo ang sitwasyon at ang bayarin sa ospital, at sasabihin ko kung anong tulong ang maaari.",
+  taglish: "Hello po! Ako si Tulong. Ikuwento lang po ninyo ang sitwasyon at ang assessment ninyo, at sasabihin ko kung anong tulong ang puwede.",
+  english: "Hello po! I'm Tulong. Tell me about the situation and the assessment, and I'll tell you what help is available.",
+  filipino: "Magandang araw po! Ako si Tulong. Ikuwento po ninyo ang sitwasyon at ang bayarin sa matrikula, at sasabihin ko kung anong tulong ang maaari.",
 };
 const CHIPS = ["What should I bring?", "Where is my case?", "Who approves?"];
 // Starter questions on the empty chat screen
-const QUESTIONS = ["What assistance can I apply for?", "What are the requirements?", "Who approves my request?", "How do I track my request?"];
+const QUESTIONS = ["Which scholarships can I use?", "What are the requirements?", "Who approves my request?", "How do I track my request?"];
 
-export default function FamilyChat() {
+export default function StudentChat() {
   const router = useRouter();
   const [code, setCode] = useState<string | null>(null);
   const [lang, setLang] = useState<ReplyLang>("taglish");
@@ -56,14 +56,14 @@ export default function FamilyChat() {
 
   // Session: the case code saved on this phone
   useEffect(() => {
-    const c = familyCode.get();
+    const c = studentCode.get();
     if (!c) {
-      router.replace("/family");
+      router.replace("/student");
       return;
     }
     setCode(c);
     setLang(replyLang.get());
-    setName(familyName.get());
+    setName(studentName.get());
     try {
       const saved = JSON.parse(localStorage.getItem(chatKey(c)) || "[]");
       if (Array.isArray(saved)) setMsgs(saved);
@@ -86,12 +86,12 @@ export default function FamilyChat() {
     } catch {}
   }, [msgs, code]);
 
-  // This family's own case, from the chain (polled)
-  const { data: fc, error: caseErr } = useQuery<FamilyCase>({
-    queryKey: ["familyCase", code],
+  // This student's own case, from the chain (polled)
+  const { data: fc, error: caseErr } = useQuery<StudentCase>({
+    queryKey: ["studentCase", code],
     enabled: !!code,
     queryFn: async () => {
-      const r = await fetch(`/api/family/case?code=${encodeURIComponent(code!)}`, { cache: "no-store" });
+      const r = await fetch(`/api/student/case?code=${encodeURIComponent(code!)}`, { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
       return j;
@@ -123,7 +123,7 @@ export default function FamilyChat() {
       if (!r.ok) throw new Error(j.error);
       setMsgs([...next, { role: "assistant", text: j.reply, cards: j.cards }]);
     } catch {
-      setMsgs([...next, { role: "assistant", error: true, text: "Sorry, Tulong couldn't answer right now. Please try again, or ask the social worker." }]);
+      setMsgs([...next, { role: "assistant", error: true, text: "Sorry, Tulong couldn't answer right now. Please try again, or ask the scholarship officer." }]);
     } finally {
       setThinking(false);
     }
@@ -143,8 +143,8 @@ export default function FamilyChat() {
   function saveSettings() {
     setLang(draftLang);
     replyLang.set(draftLang);
-    familyName.set(draftName);
-    setName(familyName.get());
+    studentName.set(draftName);
+    setName(studentName.get());
     setSettings(false);
   }
 
@@ -158,9 +158,9 @@ export default function FamilyChat() {
 
   function leaveCase() {
     if (confirm("Leave this case on this phone? You will need the case code to come back.")) {
-      familyCode.clear();
-      familyName.clear();
-      router.replace("/family");
+      studentCode.clear();
+      studentName.clear();
+      router.replace("/student");
     }
   }
 
@@ -181,7 +181,7 @@ export default function FamilyChat() {
   const empty = msgs.length === 0 && !thinking;
 
   return (
-    <section className="screen-wrap" aria-label="Family chat">
+    <section className="screen-wrap" aria-label="Student chat">
       <div className="phone">
         <div className="chat-head">
           <Link href="/" className="circle-btn" aria-label="Back to home">
@@ -321,7 +321,7 @@ export default function FamilyChat() {
                   <span className="muted">{fc.coveredPhp > 0 ? "Partly paid · Remaining" : "Remaining"}</span>
                   <b className="big num">{peso(fc.remainingPhp)}</b>
                 </div>
-                <div className="note">Waiting for approval from the hospital social worker.</div>
+                <div className="note">Waiting for approval from the scholarship officer.</div>
               </div>
             )}
             {started && caseErr && !fc && <div className="b t wide note">{(caseErr as Error).message}</div>}
@@ -333,13 +333,13 @@ export default function FamilyChat() {
                   <img src="/mascot/brand-wave.png" alt="" />
                   <div>
                     <div className="label" style={{ color: "var(--green)" }}>
-                      Paid to the hospital
+                      Paid to the school
                     </div>
                     <div className="big num poppins">₱0 left</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 14, marginBottom: 6 }}>
-                  {peso(fc.coveredPhp)} was paid directly to {fc.hospitalLabel || "the hospital"}. You have nothing left to pay on this bill.
+                  {peso(fc.coveredPhp)} was paid directly to {fc.schoolLabel || "the school"}. You have nothing left to pay on this assessment.
                 </div>
                 <Tracker paid />
                 {fc.payments.map((p, i) => (
@@ -382,7 +382,7 @@ export default function FamilyChat() {
             <Send />
           </button>
         </form>
-        <div className="privacy">Please don&apos;t share full names or diagnoses.</div>
+        <div className="privacy">Please don&apos;t share full names, student numbers or grades.</div>
       </div>
     </section>
   );
@@ -443,7 +443,7 @@ function AssistantBlock({
               </li>
             ))}
           </ul>
-          <div className="note">Only the hospital social worker can approve aid.</div>
+          <div className="note">Only the scholarship officer can approve aid.</div>
         </div>
       )}
     </>

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { consumeNonce, setSessionCookie } from "@/lib/server/auth";
 import { snapshot } from "@/lib/server/indexer";
 
-// Step 2: check the signature, then check the wallet is the contract's registered social worker.
+// Step 2: check the signature, then check the wallet is the contract's registered scholarship officer.
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
@@ -29,10 +29,10 @@ export async function POST(req: Request) {
   if (!ok) return NextResponse.json({ error: "The signature doesn't match this wallet." }, { status: 401 });
 
   const snap = await snapshot();
-  if (!snap.socialWorker) return NextResponse.json({ error: snap.error ?? "The contract isn't set up yet." }, { status: 503 });
-  if (snap.socialWorker.toLowerCase() !== address.toLowerCase()) {
+  if (!snap.officer) return NextResponse.json({ error: snap.error ?? "The contract isn't set up yet." }, { status: 503 });
+  if (snap.officer.toLowerCase() !== address.toLowerCase()) {
     return NextResponse.json(
-      { error: "This wallet isn't the registered social worker. Switch to the Approver account in MetaMask." },
+      { error: "This wallet isn't the registered scholarship officer. Switch to the Approver account in MetaMask." },
       { status: 403 },
     );
   }

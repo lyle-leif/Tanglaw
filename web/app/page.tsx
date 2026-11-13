@@ -10,13 +10,13 @@ export default function Home() {
         <div>
           <span className="pill green">● Live on BNB Smart Chain testnet</span>
           <h1>
-            Healthcare help,
+            Scholarships,
             <br />
-            made <span className="underline">simpler.</span>
+            paid <span className="underline">straight.</span>
           </h1>
-          <p>Ask Tulong which aid can cover your hospital bill, follow your case, and see every peso paid straight to the hospital.</p>
+          <p>Ask Tulong which scholarships can cover your tuition assessment. Every peso goes straight to the school cashier, never more than you owe, and every payment is on a public record.</p>
           <div className="home-cta">
-            <Link href="/family" className="btn primary">
+            <Link href="/student" className="btn primary">
               Get Assistance <Icon name="next" size={18} />
             </Link>
             <Link href="/activity" className="btn outline">
@@ -30,13 +30,13 @@ export default function Home() {
         </div>
       </section>
       <div className="home-grid">
-        <Link href="/family" className="card home-card">
+        <Link href="/student" className="card home-card">
           <span className="ic">
             <Icon name="chat" size={24} />
           </span>
           <div>
-            <b>I&apos;m a family member</b>
-            <span>Enter the case code from the social worker, then ask Tulong in Taglish, English or Filipino.</span>
+            <b>I&apos;m a student</b>
+            <span>Enter the case code from the scholarship officer, then ask Tulong in Taglish, English or Filipino.</span>
           </div>
         </Link>
         <Link href="/staff" className="card home-card">
@@ -44,7 +44,7 @@ export default function Home() {
             <Icon name="folder" size={24} />
           </span>
           <div>
-            <b>I&apos;m a social worker</b>
+            <b>I&apos;m a scholarship officer</b>
             <span>Open cases, review Tulong&apos;s plan and approve it with your MetaMask wallet.</span>
           </div>
         </Link>
@@ -54,7 +54,7 @@ export default function Home() {
           </span>
           <div>
             <b>Track every peso</b>
-            <span>Every payment and every refusal, on a public record with no names.</span>
+            <span>Every payment and every refused double-funding, on a public record with no names.</span>
           </div>
         </Link>
       </div>

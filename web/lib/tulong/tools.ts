@@ -11,20 +11,20 @@ const NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
 export const LOOKUP_PROGRAMS: ToolSpec = {
   name: "lookup_programs",
   description:
-    "Returns the fixed rules table: aid programs in priority order, each one's per-case cap, a one-line explanation for the family, the documents each needs, one consolidated checklist, and the rule source keys.",
+    "Returns the fixed rules table: aid programs in priority order, each one's per-case cap, a one-line explanation for the student, the documents each needs, one consolidated checklist, and the rule source keys.",
   parameters: NO_ARGS,
 };
 
 export const GET_CASE_CHAT: ToolSpec = {
   name: "get_case",
-  description: "Returns this family's own case from the blockchain: bill (set by the social worker), amount covered and remaining balance. Read-only.",
+  description: "Returns this student's own case from the blockchain: bill (set by the scholarship officer), amount covered and remaining balance. Read-only.",
   parameters: NO_ARGS,
 };
 
 export const GET_CASE_DRAFT: ToolSpec = {
   name: "get_case",
   description:
-    "Returns the case from the blockchain (bill set by the social worker, covered, remaining) and any documents attached to the bill. Read-only.",
+    "Returns the case from the blockchain (bill set by the scholarship officer, covered, remaining) and any documents attached to the bill. Read-only.",
   parameters: NO_ARGS,
 };
 
@@ -37,7 +37,7 @@ export const GET_PROGRAM_ROOM: ToolSpec = {
 
 export const DRAFT_PAYMENT_PLAN: ToolSpec = {
   name: "draft_payment_plan",
-  description: "Submit the payment plan for the social worker to review. Call once. Code validates it before it is shown.",
+  description: "Submit the payment plan for the scholarship officer to review. Call once. Code validates it before it is shown.",
   strict: true,
   parameters: {
     type: "object",
@@ -53,7 +53,7 @@ export const DRAFT_PAYMENT_PLAN: ToolSpec = {
           properties: {
             program: { type: "string", enum: PROGRAMS.map((p) => p.name) },
             amountPhp: { type: "integer", description: "Whole pesos" },
-            reason: { type: "string", description: "One short English sentence. No names, diagnoses or addresses." },
+            reason: { type: "string", description: "One short English sentence. No names, student numbers, grades or addresses." },
             source: { type: "string", enum: Object.keys(SOURCES) },
           },
         },
@@ -69,13 +69,13 @@ export function caseForModel(c: CaseState, snap: ChainSnapshot, withDocs: boolea
   return {
     caseId: c.caseId,
     label: c.label,
-    hospital: snap.hospitalLabel,
+    school: snap.schoolLabel,
     billPhp: c.billPhp,
-    billSetBy: "social worker (in openCase). Tulong cannot change it.",
+    billSetBy: "scholarship officer (in openCase). Tulong cannot change it.",
     coveredPhp: c.coveredPhp,
     remainingPhp: c.remainingPhp,
     ...(withDocs
-      ? { attachedDocuments: rec?.memo ? [{ kind: "memo attached to the bill", untrustedText: rec.memo }] : [] }
+      ? { attachedDocuments: rec?.memo ? [{ kind: "memo attached to the assessment", untrustedText: rec.memo }] : [] }
       : {}),
   };
 }

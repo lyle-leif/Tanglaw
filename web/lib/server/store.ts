@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { PaymentRow, RefusalRow } from "../chain";
 import type { Plan } from "../plan";
+import { getConfig } from "./config";
 
 // Off-chain demo data: case salts and memos, Tulong's drafts and every plan keyed by its hash.
 // A JSON file is enough for the demo (MIGRATION.md §8). It is gitignored. On a read-only host
@@ -13,14 +14,15 @@ interface CaseRecord {
   caseHash: string;
   memo: string; // document attached to the bill (data for Tulong, never instructions)
   openedAt: number;
-  code: string; // family case code, e.g. TGL-K7Q-4M2. Off-chain only.
+  code: string; // student case code, e.g. TGL-K7Q-4M2. Off-chain only.
 }
 
 interface StoreShape {
+  vault?: string; // the vault these rows belong to; a redeploy archives the old file and starts clean
   cases: Record<string, CaseRecord>;
   drafts: Record<string, { plan: Plan; provider: string }>; // latest validated Tulong draft per caseId
   plans: Record<string, Plan>; // planHash -> plan JSON
-  codes: Record<string, string>; // family case code -> caseId
+  codes: Record<string, string>; // student case code -> caseId
   // Contract events copied from the receipts of transactions the app sent. Lets the app work on
   // public RPCs that refuse eth_getLogs. Each row is decoded from the chain, never typed by a user.
   openedTx: Record<string, { tx: string; block: string }>; // caseId -> openCase tx
@@ -32,6 +34,9 @@ const FILE = path.join(process.cwd(), ".data", "store.json");
 // One copy per server process, shared by every route bundle
 const g = globalThis as unknown as { __tanglawStore?: StoreShape };
 
+const hasRows = (s: StoreShape) =>
+  [s.cases, s.drafts, s.plans, s.codes, s.openedTx, s.paid, s.refused].some((x) => x && Object.keys(x).length > 0);
+
 function load(): StoreShape {
   let s = g.__tanglawStore;
   if (!s) {
@@ -39,6 +44,23 @@ function load(): StoreShape {
       s = JSON.parse(fs.readFileSync(FILE, "utf8")) as StoreShape;
     } catch {
       s = {} as StoreShape;
+    }
+    // Rows from another vault (e.g. before a redeploy) would mix old cases and payments into
+    // this vault's record. Keep them in an archive file and start clean.
+    const vault = getConfig().vault?.toLowerCase();
+    if (vault && s.vault !== vault) {
+      if (hasRows(s)) {
+        try {
+          const tag = s.vault ? s.vault.slice(0, 10) : "untagged";
+          fs.renameSync(FILE, path.join(path.dirname(FILE), `store.${tag}.${Date.now()}.json`));
+        } catch {
+          // nothing on disk to move
+        }
+        s = {} as StoreShape;
+      }
+      s.vault = vault;
+      g.__tanglawStore = s;
+      save();
     }
     g.__tanglawStore = s;
   }

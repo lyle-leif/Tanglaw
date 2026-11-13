@@ -10,21 +10,21 @@ export const FALLBACK_RPC = "https://bsc-testnet-rpc.publicnode.com";
 export const EXPLORER = "https://testnet.bscscan.com";
 
 export const VAULT_ABI = parseAbi([
-  "function openCase(bytes32 caseId, bytes32 caseHash, address hospital, uint256 bill)",
+  "function openCase(bytes32 caseId, bytes32 caseHash, address school, uint256 bill)",
   "function approveAndPay(bytes32 caseId, uint8[] programIds, uint256[] amounts, bytes32 planHash)",
-  "function socialWorker() view returns (address)",
+  "function officer() view returns (address)",
   "function paused() view returns (bool)",
-  "function isHospital(address) view returns (bool)",
+  "function isSchool(address) view returns (bool)",
   "function programs(uint8) view returns (string name, uint256 perCaseCap, uint256 budgetLeft, bool active)",
-  "function cases(bytes32) view returns (bytes32 caseHash, address hospital, uint256 bill, uint256 covered, bool exists)",
+  "function cases(bytes32) view returns (bytes32 caseHash, address school, uint256 bill, uint256 covered, bool exists)",
   "function paidByProgram(bytes32, uint8) view returns (uint256)",
   "function remaining(bytes32 caseId) view returns (uint256)",
   "function programRoom(bytes32 caseId, uint8 id) view returns (uint256)",
-  "error NotSocialWorker()",
+  "error NotOfficer()",
   "error OverProgramCap()",
   "error OverBudget()",
   "error OverBill()",
-  "error UnknownHospital()",
+  "error UnknownSchool()",
   "error CaseNotFound()",
   "error Paused()",
   "error InactiveProgram()",
@@ -32,11 +32,11 @@ export const VAULT_ABI = parseAbi([
   "error BadArrays()",
   "error CaseExists()",
   "error TransferFailed()",
-  "event CaseOpened(bytes32 indexed caseId, address indexed hospital, uint256 bill)",
+  "event CaseOpened(bytes32 indexed caseId, address indexed school, uint256 bill)",
   "event PlanApproved(bytes32 indexed caseId, bytes32 planHash)",
-  "event Paid(bytes32 indexed caseId, uint8 indexed programId, address indexed hospital, uint256 amount, bytes32 planHash)",
-  "event HospitalSet(address indexed hospital, bool ok)",
-  "event SocialWorkerSet(address indexed socialWorker)",
+  "event Paid(bytes32 indexed caseId, uint8 indexed programId, address indexed school, uint256 amount, bytes32 planHash)",
+  "event SchoolSet(address indexed school, bool ok)",
+  "event OfficerSet(address indexed officer)",
 ]);
 
 // approveAndPay is sent with a fixed gas limit so MetaMask doesn't stop a transaction that
@@ -59,7 +59,7 @@ export interface ProgramState {
 export interface CaseState {
   caseId: `0x${string}`;
   label: string; // "Case A", "Case B", ... by opening order
-  hospital: `0x${string}`;
+  school: `0x${string}`;
   billPhp: number;
   coveredPhp: number;
   remainingPhp: number;
@@ -81,9 +81,9 @@ export interface PaymentRow {
 export interface ChainSnapshot {
   configured: boolean;
   vault: `0x${string}` | null;
-  socialWorker: `0x${string}` | null;
-  hospital: `0x${string}` | null;
-  hospitalLabel: string;
+  officer: `0x${string}` | null;
+  school: `0x${string}` | null;
+  schoolLabel: string;
   paused: boolean;
   programs: ProgramState[];
   cases: CaseState[];
@@ -111,15 +111,15 @@ export function refusalReason(err: string, program?: string): string {
     case "OverBudget":
       return `${p} has no budget left for this`;
     case "OverBill":
-      return "More than the hospital bill";
+      return "More than the assessment";
     case "InactiveProgram":
       return `${p} isn't active`;
     case "ZeroAmount":
       return "A line had no amount";
     case "Paused":
       return "Payments were paused";
-    case "NotSocialWorker":
-      return "Not signed by the social worker";
+    case "NotOfficer":
+      return "Not signed by the scholarship officer";
     case "CaseNotFound":
       return "Case not open";
     default:
@@ -127,7 +127,7 @@ export function refusalReason(err: string, program?: string): string {
   }
 }
 
-// ---------- contract error -> plain words (staff screen only; Ana never sees refusals) ----------
+// ---------- contract error -> plain words (staff screen only; the student never sees refusals) ----------
 
 export type LineLike = { programId: number; amountPhp: number };
 
@@ -171,8 +171,8 @@ export function roomFor(c: CaseState, programs: ProgramState[], programId: numbe
 export function errorMessage(err: string, sim?: SimResult): string {
   const name = sim?.line ? programById(sim.line.programId)?.name ?? "This program" : "This program";
   switch (err) {
-    case "NotSocialWorker":
-      return "Only the registered social worker wallet can do this. Switch to the Approver account.";
+    case "NotOfficer":
+      return "Only the registered scholarship officer wallet can do this. Switch to the Approver account.";
     case "OverProgramCap":
       return sim?.line
         ? `${name} can pay at most ${peso(sim.room ?? 0)} more for this case. This line asked for ${peso(sim.line.amountPhp)}.`
@@ -180,9 +180,11 @@ export function errorMessage(err: string, sim?: SimResult): string {
     case "OverBudget":
       return sim?.line ? `${name} has only ${peso(sim.room ?? 0)} budget left.` : "A program has run out of budget.";
     case "OverBill":
-      return sim ? `This would pay more than the bill. Only ${peso(sim.room ?? 0)} is left.` : "This would pay more than the bill.";
-    case "UnknownHospital":
-      return "This hospital isn't on the approved list. Ask the admin to add it.";
+      return sim
+        ? `This would pay more than the assessment. Only ${peso(sim.room ?? 0)} is left.`
+        : "This would pay more than the assessment.";
+    case "UnknownSchool":
+      return "This school isn't on the approved list. Ask the admin to add it.";
     case "CaseNotFound":
       return "This case isn't open on-chain yet. Open the case first.";
     case "Paused":

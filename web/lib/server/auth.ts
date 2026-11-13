@@ -3,8 +3,8 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-// Staff sign-in: the social worker signs a one-time message with MetaMask. If the signing
-// wallet is the `socialWorker` registered in the contract, she gets a signed session cookie.
+// Staff sign-in: the scholarship officer signs a one-time message with MetaMask. If the signing
+// wallet is the `officer` registered in the contract, she gets a signed session cookie.
 // No passwords. The app never sees a private key, only a signature.
 
 const COOKIE = "tanglaw_staff";
@@ -20,7 +20,7 @@ export function signInMessage(address: string, nonce: string, issued: string) {
   return [
     "Tanglaw staff sign-in",
     "",
-    "Sign this message to prove you control the social worker wallet.",
+    "Sign this message to prove you control the scholarship officer wallet.",
     "This does not send a transaction or cost any fee.",
     "",
     `Wallet: ${address.toLowerCase()}`,
@@ -84,4 +84,4 @@ export async function getStaff(): Promise<`0x${string}` | null> {
   }
 }
 
-export const notStaff = () => NextResponse.json({ error: "Social worker sign-in required." }, { status: 401 });
+export const notStaff = () => NextResponse.json({ error: "Scholarship officer sign-in required." }, { status: 401 });

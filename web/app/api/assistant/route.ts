@@ -12,7 +12,7 @@ export const maxDuration = 120;
 const Body = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("chat"),
-    code: z.string().max(20), // the family's case code
+    code: z.string().max(20), // the student's case code
     lang: z.enum(["taglish", "english", "filipino"]).default("taglish"), // Tulong's reply language
     history: z
       .array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(2000) }))
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       const { history, code, lang } = parsed.data;
       return NextResponse.json(await chat(history, code, lang));
     }
-    if (!(await getStaff())) return notStaff(); // only the social worker can ask for a plan
+    if (!(await getStaff())) return notStaff(); // only the scholarship officer can ask for a plan
     return NextResponse.json(await draft(parsed.data.caseId));
   } catch (e) {
     const msg = e instanceof TulongError ? e.message : "Something went wrong with Tulong.";

@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Icon, Lock, Spin } from "@/components/Icons";
-import { familyCode, familyName, formatCode } from "@/lib/family";
+import { studentCode, studentName, formatCode } from "@/lib/student";
 
-// Family sign-in: the case code the social worker gave them. No email, no password.
-export default function FamilyEntry() {
+// Student sign-in: the case code the scholarship officer gave them. No email, no password.
+export default function StudentEntry() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -14,7 +14,7 @@ export default function FamilyEntry() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (familyCode.get()) router.replace("/family/chat");
+    if (studentCode.get()) router.replace("/student/chat");
   }, [router]);
 
   async function submit(e: FormEvent) {
@@ -27,12 +27,12 @@ export default function FamilyEntry() {
     setBusy(true);
     setErr(null);
     try {
-      const r = await fetch(`/api/family/case?code=${encodeURIComponent(c)}`);
+      const r = await fetch(`/api/student/case?code=${encodeURIComponent(c)}`);
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
-      familyCode.set(c);
-      familyName.set(name);
-      router.push("/family/chat");
+      studentCode.set(c);
+      studentName.set(name);
+      router.push("/student/chat");
     } catch (e) {
       setErr((e as Error).message || "Something went wrong. Try again.");
     } finally {
@@ -49,7 +49,7 @@ export default function FamilyEntry() {
           <img src="/mascot/tulong.png" alt="Tulong, the AI helper" />
         </div>
         <h1>Enter your case code</h1>
-        <p className="muted">The hospital social worker gives you this code when they open your case.</p>
+        <p className="muted">The scholarship officer gives you this code when they open your case.</p>
         <label className="field">
           <span>Your first name (optional)</span>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="So Tulong can greet you" autoComplete="given-name" maxLength={40} />

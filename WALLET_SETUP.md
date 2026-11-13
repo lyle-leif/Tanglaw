@@ -21,7 +21,7 @@ Always check MetaMask shows **BNB Smart Chain Testnet (97)** before deploying or
 | Account | Role | Used for | Address |
 |---|---|---|---|
 | Account 1 → **Deployer** | Team / admin (contract `owner`) | Deploy and verify TanglawVault, configure programs and allowlist, set the approver, fund the vault with tBNB | `0x…` (fill in; public address only) |
-| Account 2 → **Approver** | Social worker / student affairs officer in the demo | Review the AI's plan and **sign** payouts in the MetaMask pop-up | `0x…` (fill in) |
+| Account 2 → **Approver** | Scholarship officer in the demo | Review the AI's plan and **sign** payouts in the MetaMask pop-up | `0x…` (fill in) |
 | Tulong (AI) | — | **No wallet.** Only drafts payment plans | — |
  
 Why two accounts: the demo shows that only the Approver can sign payouts and the contract rejects any other wallet.

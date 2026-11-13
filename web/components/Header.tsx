@@ -6,9 +6,9 @@ import { Logo } from "./Icons";
 
 const NAV = [
   { href: "/", label: "Home", match: (p: string) => p === "/" },
-  { href: "/family", label: "Family", match: (p: string) => p.startsWith("/family") },
+  { href: "/student", label: "Student", match: (p: string) => p.startsWith("/student") },
   { href: "/activity", label: "Public record", match: (p: string) => p.startsWith("/activity") || p.startsWith("/receipt") },
-  { href: "/staff", label: "Social worker sign-in", match: (p: string) => p.startsWith("/staff") },
+  { href: "/staff", label: "Scholarship officer sign-in", match: (p: string) => p.startsWith("/staff") },
 ];
 
 export function Header() {
@@ -25,8 +25,8 @@ export function Header() {
             {n.label}
           </Link>
         ))}
-        {!path.startsWith("/family") && (
-          <Link href="/family" className="btn primary">
+        {!path.startsWith("/student") && (
+          <Link href="/student" className="btn primary">
             Get Assistance
           </Link>
         )}

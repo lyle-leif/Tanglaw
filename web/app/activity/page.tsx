@@ -7,7 +7,7 @@ import { peso, short } from "@/lib/peso";
 import { useSnapshot } from "@/lib/useSnapshot";
 
 // Public record: every Paid event from the vault, and every payment the contract refused.
-// Program, amount, hospital, receipt. No names.
+// Program, amount, school, receipt. No names.
 
 export default function ActivityPage() {
   const { data: snap, isLoading, error } = useSnapshot(6000);
@@ -26,7 +26,7 @@ export default function ActivityPage() {
         <div>
           <span className="pill green">● Read live from BNB Smart Chain testnet</span>
           <h1>Every peso, in public.</h1>
-          <p>Each payment from the Tanglaw vault, paid straight to a hospital, and every payment the rules refused. No names. Case IDs are random.</p>
+          <p>Each payment from the Tanglaw vault, paid straight to a school, and every payment the rules refused. No names. Case IDs are random.</p>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mascot/brand-wink.png" alt="" />
@@ -34,7 +34,7 @@ export default function ActivityPage() {
 
       <div className="kpis num" aria-live="polite">
         <div className="card kpi">
-          <div className="label">Paid to hospitals</div>
+          <div className="label">Paid to schools</div>
           <div className="v" style={{ color: "var(--green)" }}>
             {noData ? "—" : peso(total)}
           </div>
@@ -108,7 +108,7 @@ export default function ActivityPage() {
               <th>Case</th>
               <th>Program</th>
               <th>Amount</th>
-              <th>Hospital</th>
+              <th>School</th>
               <th>Receipt</th>
             </tr>
           </thead>
@@ -135,7 +135,7 @@ export default function ActivityPage() {
                   <td className="num">
                     <b>{peso(p.amountPhp)}</b>
                   </td>
-                  <td>{snap?.hospitalLabel}</td>
+                  <td>{snap?.schoolLabel}</td>
                   <td>
                     <Link className="link" href={`/receipt/${p.tx}`}>
                       Receipt
@@ -230,10 +230,10 @@ export default function ActivityPage() {
             <Icon name="check" size={18} /> The chain proves
           </h3>
           {[
-            "Only the registered social worker wallet approved",
+            "Only the registered scholarship officer wallet approved",
             "Each program's per-case cap and budget were respected",
-            "Money went only to the case's allowlisted hospital",
-            "The total never exceeded the bill",
+            "Money went only to the case's allowlisted school",
+            "The total never exceeded the assessment (no double-funding)",
             "Which AI plan was approved (plan fingerprint)",
           ].map((t) => (
             <div className="ck" key={t}>
@@ -249,8 +249,8 @@ export default function ActivityPage() {
             <Icon name="alert" size={18} /> It doesn&apos;t prove
           </h3>
           {[
-            "That the hospital bill is authentic",
-            "That the patient is eligible",
+            "That the assessment is authentic",
+            "That the student is eligible",
             "That the program rules match real agency rules (they are simulated)",
             "That a real agency disbursed real money (testnet funds)",
           ].map((t) => (

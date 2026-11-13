@@ -4,9 +4,9 @@ import { planHash, type Plan } from "@/lib/plan";
 import { getStaff, notStaff } from "@/lib/server/auth";
 import { store } from "@/lib/server/store";
 
-// GET ?caseId=  -> Tulong's latest validated draft for the case (social worker only)
+// GET ?caseId=  -> Tulong's latest validated draft for the case (scholarship officer only)
 // GET ?hash=    -> the plan JSON behind an on-chain planHash (public: it is the proof)
-// POST {plan}   -> store an edited plan before it is signed; returns its hash (social worker only)
+// POST {plan}   -> store an edited plan before it is signed; returns its hash (scholarship officer only)
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {

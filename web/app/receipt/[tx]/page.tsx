@@ -14,10 +14,10 @@ import { useSnapshot } from "@/lib/useSnapshot";
 // Public receipt for one payment transaction. The "plan matches" check runs in the visitor's
 // browser: it reads the transaction receipt straight from BSC testnet (not from our server),
 // takes the planHash the contract stored, and compares it with the fingerprint of the plan
-// the social worker approved. Same plan → same fingerprint. Any change → no match.
+// the scholarship officer approved. Same plan → same fingerprint. Any change → no match.
 
 type Check =
-  | { state: "ok"; onchainHash: string; lines: { programId: number; amountPhp: number }[]; hospital: string; block: bigint }
+  | { state: "ok"; onchainHash: string; lines: { programId: number; amountPhp: number }[]; school: string; block: bigint }
   | { state: "error"; message: string };
 
 export default function ReceiptPage() {
@@ -41,7 +41,7 @@ export default function ReceiptPage() {
         state: "ok",
         onchainHash: paid[0].args.planHash,
         lines: paid.map((e) => ({ programId: Number(e.args.programId), amountPhp: weiToPeso(e.args.amount) })),
-        hospital: paid[0].args.hospital,
+        school: paid[0].args.school,
         block: r.blockNumber,
       };
     },
@@ -85,10 +85,10 @@ export default function ReceiptPage() {
       <div className="card rcpt-card">
         <div className="rcpt-band">
           <div>
-            <div className="label">Paid to the hospital</div>
+            <div className="label">Paid to the school</div>
             <h1 className="num">{onchain ? peso(total) : "…"}</h1>
             <div style={{ fontSize: 14 }}>
-              {snap?.hospitalLabel ?? "The hospital"} · BSC testnet
+              {snap?.schoolLabel ?? "The school"} · BSC testnet
               {time.data ? ` · ${new Date(time.data * 1000).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}` : ""}
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function ReceiptPage() {
                     );
                   })}
                   <tr className="tot">
-                    <td>Total paid to the hospital</td>
+                    <td>Total paid to the school</td>
                     <td className="num amt">{peso(total)}</td>
                   </tr>
                 </tbody>
@@ -136,7 +136,7 @@ export default function ReceiptPage() {
                   <>
                     <div className="vh">Plan matches the blockchain</div>
                     <div>
-                      The plan the social worker approved gives the same fingerprint the contract stored with this payment. Nobody
+                      The plan the scholarship officer approved gives the same fingerprint the contract stored with this payment. Nobody
                       changed it after approval.
                     </div>
                   </>
@@ -174,10 +174,10 @@ export default function ReceiptPage() {
                     {short(tx)} ↗
                   </a>
                 </dd>
-                <dt>Hospital wallet</dt>
+                <dt>School wallet</dt>
                 <dd>
-                  <a className="link mono" href={addrUrl(onchain.hospital)} target="_blank" rel="noreferrer">
-                    {short(onchain.hospital)} ↗
+                  <a className="link mono" href={addrUrl(onchain.school)} target="_blank" rel="noreferrer">
+                    {short(onchain.school)} ↗
                   </a>
                 </dd>
                 <dt>Network</dt>
