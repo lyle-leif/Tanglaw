@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { BaseError, UserRejectedRequestError } from "viem";
 import { useConnect, useConnection, useConnectors, useDisconnect, useSignMessage } from "wagmi";
-import { Lock, Spin } from "@/components/Icons";
+import { Icon, Lock, Spin } from "@/components/Icons";
 import { short } from "@/lib/peso";
 import { Dashboard } from "./Dashboard";
 
@@ -84,7 +84,7 @@ export default function StaffPage() {
             Signed in as social worker <b className="mono">{short(session)}</b>
           </span>
           <button className="btn ghost" onClick={signOut}>
-            Sign out
+            <Icon name="logout" size={16} /> Sign out
           </button>
         </div>
         <Dashboard onUnauthorized={() => qc.invalidateQueries({ queryKey: ["staffMe"] })} />

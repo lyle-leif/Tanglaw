@@ -13,7 +13,8 @@ import {
   type Hash,
 } from "viem";
 import { useConnect, useConnection, useConnectors, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
-import { Hosp, Lock, Shield, Spin, Stop, Check } from "@/components/Icons";
+import { Avatar, Check, Hosp, Icon, Lock, Shield, Spin, Stop } from "@/components/Icons";
+import { Tracker } from "@/components/Tracker";
 import {
   APPROVE_GAS,
   CHAIN,
@@ -287,7 +288,7 @@ export function Dashboard({ onUnauthorized }: { onUnauthorized: () => void }) {
         })}
         {!cases.length && <p className="muted" style={{ fontSize: 14, margin: "4px" }}>No cases yet.</p>}
         <button className="btn secondary new-case" onClick={() => setOpening(true)}>
-          + Open a case
+          <Icon name="plus" size={18} /> Open a case
         </button>
       </aside>
 
@@ -360,9 +361,7 @@ export function Dashboard({ onUnauthorized }: { onUnauthorized: () => void }) {
                   <div className="v">{peso(current.remainingPhp)}</div>
                 </div>
               </div>
-              <div className="bar">
-                <i style={{ width: `${(current.coveredPhp / current.billPhp) * 100}%` }} />
-              </div>
+              <Tracker paid={current.remainingPhp === 0} large />
               <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
                 Bill entered by the social worker when opening the case. Tulong can read it but can&apos;t change it.
               </div>
@@ -555,9 +554,11 @@ function PlanCard({
     <section className="card plan">
       <div className="plan-top">
         <h3>Payment plan</h3>
-        <span className="pill amber">
-          Drafted by Tulong{cu?.provider ? ` (${cu.provider})` : ""} · Not signed · Tulong has no wallet
+        <span className="by">
+          <Avatar size={28} />
+          Drafted by Tulong{cu?.provider ? ` · ${cu.provider}` : ""}
         </span>
+        <span className="pill gray">Not signed · Tulong has no wallet</span>
         {canRedraft && (
           <span style={{ marginLeft: "auto" }}>
             <button className="btn secondary" style={{ height: 36 }} onClick={onDraft}>
@@ -617,7 +618,9 @@ function SignPanel(props: {
         </div>
       )}
 
-      <h3>Sign</h3>
+      <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Icon name="wallet" size={18} /> Sign and release
+      </h3>
       <div className="payee">
         <Hosp />
         <div>
@@ -651,7 +654,7 @@ function SignPanel(props: {
         </button>
       ) : (
         <button className="btn primary" onClick={props.onSign} disabled={!canSign}>
-          Sign with wallet
+          {drafted ? `Approve and release ${peso(tot)}` : "Sign with wallet"}
         </button>
       )}
       <div className="hint">You are approving this exact plan. The contract checks every rule before paying. Tulong can&apos;t sign.</div>
@@ -868,7 +871,7 @@ function CodeDisplay({ code, onClose }: { code: string; onClose: () => void }) {
             navigator.clipboard?.writeText(code).then(() => setCopied(true), () => {});
           }}
         >
-          {copied ? "Copied ✓" : "Copy code"}
+          <Icon name="copy" size={16} /> {copied ? "Copied" : "Copy code"}
         </button>
         <button className="btn ghost" onClick={onClose}>
           Done

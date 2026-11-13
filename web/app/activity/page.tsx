@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Icon } from "@/components/Icons";
 import { addrUrl, refusalReason, txUrl } from "@/lib/chain";
 import { peso, short } from "@/lib/peso";
 import { useSnapshot } from "@/lib/useSnapshot";
@@ -16,25 +17,42 @@ export default function ActivityPage() {
   const total = pays.reduce((a, p) => a + p.amountPhp, 0);
   const nCases = new Set(pays.map((p) => p.caseId)).size;
   const loading = isLoading && !snap;
+  // If the chain read failed, show a dash instead of a zero that looks real
+  const noData = loading || (!!snap?.error && !pays.length && !refusals.length);
 
   return (
     <div className="act">
       <div className="act-hero">
         <div>
+          <span className="pill green">● Read live from BNB Smart Chain testnet</span>
           <h1>Every peso, in public.</h1>
-          <div className="counter num" aria-live="polite">
-            <span className="paid">
-              <b>{peso(total)}</b> paid
-            </span>
-            <span className="refused">
-              <b>{refusals.length}</b> refused by the rules
-            </span>
-          </div>
-          <p className="num">
-            {nCases} case{nCases === 1 ? "" : "s"} paid · {pays.length ? 1 : 0} hospital · No names. Case IDs are random.
-          </p>
+          <p>Each payment from the Tanglaw vault, paid straight to a hospital, and every payment the rules refused. No names. Case IDs are random.</p>
         </div>
-        <span className="pill navy">Public record · BSC Testnet</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot/brand-wink.png" alt="" />
+      </div>
+
+      <div className="kpis num" aria-live="polite">
+        <div className="card kpi">
+          <div className="label">Paid to hospitals</div>
+          <div className="v" style={{ color: "var(--green)" }}>
+            {noData ? "—" : peso(total)}
+          </div>
+        </div>
+        <div className="card kpi">
+          <div className="label">Cases paid</div>
+          <div className="v">{noData ? "—" : nCases}</div>
+        </div>
+        <div className="card kpi">
+          <div className="label">Refused by the rules</div>
+          <div className="v" style={{ color: "var(--red)" }}>
+            {noData ? "—" : refusals.length}
+          </div>
+        </div>
+        <div className="card kpi">
+          <div className="label">Names on the record</div>
+          <div className="v">0</div>
+        </div>
       </div>
 
       {(error || snap?.error) && <div className="err-bar">{snap?.error ?? "Couldn't load the public record. Retrying…"}</div>}
@@ -124,7 +142,7 @@ export default function ActivityPage() {
                     </Link>
                     {" · "}
                     <a className="link" href={txUrl(p.tx)} target="_blank" rel="noreferrer">
-                      BscScan ↗
+                      BscScan <Icon name="ext" size={13} />
                     </a>
                   </td>
                 </tr>
@@ -205,30 +223,46 @@ export default function ActivityPage() {
         )}
       </p>
 
-      <details className="card proves">
-        <summary>What this record proves, and what it doesn&apos;t</summary>
-        <div className="pv">
-          <div>
-            <b style={{ color: "var(--green-ink)" }}>The chain proves</b>
-            <ul>
-              <li>Only the registered social worker wallet approved</li>
-              <li>Each program&apos;s per-case cap and budget were respected</li>
-              <li>Money went only to the case&apos;s allowlisted hospital</li>
-              <li>The total never exceeded the bill</li>
-              <li>Which AI plan was approved (plan fingerprint)</li>
-            </ul>
-          </div>
-          <div>
-            <b>It doesn&apos;t prove</b>
-            <ul>
-              <li>That the hospital bill is authentic</li>
-              <li>That the patient is eligible</li>
-              <li>That the program rules match real agency rules (they are simulated)</li>
-              <li>That a real agency disbursed real money (testnet funds)</li>
-            </ul>
-          </div>
+      <h2 style={{ fontSize: 26, marginTop: 28 }}>What this record proves</h2>
+      <div className="proves-grid">
+        <div className="card" style={{ borderColor: "#BFE3CB" }}>
+          <h3 style={{ color: "var(--green-ink)" }}>
+            <Icon name="check" size={18} /> The chain proves
+          </h3>
+          {[
+            "Only the registered social worker wallet approved",
+            "Each program's per-case cap and budget were respected",
+            "Money went only to the case's allowlisted hospital",
+            "The total never exceeded the bill",
+            "Which AI plan was approved (plan fingerprint)",
+          ].map((t) => (
+            <div className="ck" key={t}>
+              <span className="c ok">
+                <Icon name="check" size={13} />
+              </span>
+              {t}
+            </div>
+          ))}
         </div>
-      </details>
+        <div className="card" style={{ borderColor: "#F2D9A0" }}>
+          <h3 style={{ color: "var(--amber-ink)" }}>
+            <Icon name="alert" size={18} /> It doesn&apos;t prove
+          </h3>
+          {[
+            "That the hospital bill is authentic",
+            "That the patient is eligible",
+            "That the program rules match real agency rules (they are simulated)",
+            "That a real agency disbursed real money (testnet funds)",
+          ].map((t) => (
+            <div className="ck" key={t}>
+              <span className="c w">
+                <Icon name="x" size={13} />
+              </span>
+              {t}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

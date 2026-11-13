@@ -4,30 +4,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "./Icons";
 
-const AREAS = [
-  { prefix: "/family", label: "Family" },
-  { prefix: "/staff", label: "Social worker" },
-  { prefix: "/activity", label: "Public record" },
+const NAV = [
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
+  { href: "/family", label: "Family", match: (p: string) => p.startsWith("/family") },
+  { href: "/activity", label: "Public record", match: (p: string) => p.startsWith("/activity") || p.startsWith("/receipt") },
+  { href: "/staff", label: "Social worker sign-in", match: (p: string) => p.startsWith("/staff") },
 ];
 
 export function Header() {
   const path = usePathname();
-  const area = AREAS.find((a) => path.startsWith(a.prefix));
   return (
     <header className="top">
       <Link href="/" className="brand" aria-label="Tanglaw home">
         <Logo />
-        <div>
-          <b>Tanglaw</b>
-          <small>A light for every peso</small>
-        </div>
+        <b>tanglaw</b>
       </Link>
-      {area && <span className="pill gray">{area.label}</span>}
-      {!path.startsWith("/activity") && (
-        <Link href="/activity" className="top-link">
-          Public record
-        </Link>
-      )}
+      <nav className="top-nav" aria-label="Main">
+        {NAV.map((n) => (
+          <Link key={n.href} href={n.href} aria-current={n.match(path) ? "page" : undefined}>
+            {n.label}
+          </Link>
+        ))}
+        {!path.startsWith("/family") && (
+          <Link href="/family" className="btn primary">
+            Get Assistance
+          </Link>
+        )}
+      </nav>
     </header>
   );
 }

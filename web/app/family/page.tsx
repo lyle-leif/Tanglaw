@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Spin } from "@/components/Icons";
-import { familyCode, formatCode } from "@/lib/family";
+import { Icon, Lock, Spin } from "@/components/Icons";
+import { familyCode, familyName, formatCode } from "@/lib/family";
 
 // Family sign-in: the case code the social worker gave them. No email, no password.
 export default function FamilyEntry() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export default function FamilyEntry() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
       familyCode.set(c);
+      familyName.set(name);
       router.push("/family/chat");
     } catch (e) {
       setErr((e as Error).message || "Something went wrong. Try again.");
@@ -41,8 +43,17 @@ export default function FamilyEntry() {
   return (
     <div className="gate">
       <form className="card gate-card" onSubmit={submit}>
+        <div className="gate-art">
+          <div className="glow" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot/tulong.png" alt="Tulong, the AI helper" />
+        </div>
         <h1>Enter your case code</h1>
         <p className="muted">The hospital social worker gives you this code when they open your case.</p>
+        <label className="field">
+          <span>Your first name (optional)</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="So Tulong can greet you" autoComplete="given-name" maxLength={40} />
+        </label>
         <label className="field">
           <span>Case code</span>
           <input
@@ -63,10 +74,14 @@ export default function FamilyEntry() {
               <Spin /> Checking…
             </>
           ) : (
-            "Continue"
+            <>
+              Continue <Icon name="next" size={18} />
+            </>
           )}
         </button>
-        <p className="hint">No account or password needed. Your code only shows your own case.</p>
+        <p className="hint">
+          <Lock /> No account or password. Your name stays on this phone, and the code only shows your own case.
+        </p>
       </form>
     </div>
   );

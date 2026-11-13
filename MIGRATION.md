@@ -47,12 +47,21 @@
     - UI polish noted for the owner's restyle: the "Tanglaw" logo text renders as a default blue underlined link.
   - Phones on the same Wi-Fi: `next.config.ts` sets `allowedDevOrigins` to the laptop's LAN IPv4 addresses (read at start), otherwise Next 16 blocks dev resources from `http://<LAN IP>:3000` and the page half-loads.
 
+- **UI restyle (Nov 13, afternoon)**, from the owner's mockups (images in `design/redesign/`; they now override the look in `design/prototype.html`, the flows and states in `design/DESIGN.md` still apply). Logic, APIs and the contract are unchanged.
+  - Theme: forest green `#1F4D3A` + orange `#F07A22` on cream, Poppins/Inter, pill buttons. Old CSS token names were kept and remapped, and a `RESTYLE` block at the end of `web/app/globals.css` overrides the older rules.
+  - Mascots in `web/public/mascot/`: `tulong*.png` (headset firefly) = Tulong, the AI only; `brand-*.png` (no headset) = Tanglaw brand (home, paid card, receipt, public record).
+  - New: `components/Tracker.tsx` (Case opened, In review, Approved, Released; Approved and Released tick together because the contract approves and pays in one tx), `Icon` set + flame `Logo` in `components/Icons.tsx`, header nav with "Get Assistance".
+  - Family: optional first name on `/family` and in settings (`familyName` in `lib/family.ts`, localStorage only, never sent to the server or Tulong); empty chat shows "Hello, {name}!" with 4 starter questions; settings is a full "AI Chat Settings" sheet with Save Preference.
+  - `/activity`: KPI row (paid, cases paid, refused, names on record = 0) shows "—" when the chain read fails instead of a fake 0; "What this record proves" is two open cards.
+  - Checked in the browser: home, family code, chat (empty, conversation, tracker, paid card via a mocked case response), settings, public record, staff sign-in. `tsc` and `next build` clean. Receipt checked with live data after the RPC fallback. **Not seen yet:** the signed-in staff dashboard (needs MetaMask).
+  - RPC fallback: on Nov 13 afternoon `data-seed-prebsc-1-s1.bnbchain.org` (the `.env` RPC and wagmi's default) timed out. Server (`lib/server/indexer.ts`) and browser (`app/providers.tsx`) now use viem `fallback()`: main RPC first, then `FALLBACK_RPC` = `https://bsc-testnet-rpc.publicnode.com` (`lib/chain.ts`), 8 s timeout each. Verified: `/api/family/case` and the receipt (plan matches) load again.
+
 **Not committed yet:** the Nov 13 changes (deploy script hardening, receipt-based chain reads, `/api/tx`, `allowedDevOrigins`, track decision, docs). The repo owner commits; never add AI co-author lines (§12).
 
 **Next, in order**
 1. ~~Demo setup and full testnet run~~ done Nov 13 (see above). For the stage demo, open two **fresh** cases (A and B are now used up) and pre-draft them. Optional: test Groq alone once with `TULONG_PROVIDERS=groq`.
 2. Demo day: run the production server (`cd web && npm run build && npm start`) so no page compiles on stage.
-3. ~~Edge features~~ refusals counter + receipt with plan check built Nov 13. Skipped on purpose: hospital view, budget-low warning. Owner restyles the UI later.
+3. ~~Edge features~~ refusals counter + receipt with plan check built Nov 13. Skipped on purpose: hospital view, budget-low warning. UI restyle built Nov 13 (see Done).
 4. Screenshots for the deck, backup video, README (§11) with the vault address and BscScan link.
 5. Later (owner said "later"): deploy to Vercel. The JSON store and in-memory nonces won't survive serverless; move them to a free database (e.g. Vercel KV / Upstash / Supabase) and set `SESSION_SECRET`, `VAULT_ADDRESS`, `VAULT_DEPLOY_BLOCK` there.
 

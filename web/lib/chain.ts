@@ -4,6 +4,9 @@ import { peso } from "./peso";
 import { programById } from "./rules";
 
 export const CHAIN = bscTestnet; // chain 97 only
+
+// Backup public RPC, used when the main one (from .env, or viem's default) fails or times out.
+export const FALLBACK_RPC = "https://bsc-testnet-rpc.publicnode.com";
 export const EXPLORER = "https://testnet.bscscan.com";
 
 export const VAULT_ABI = parseAbi([

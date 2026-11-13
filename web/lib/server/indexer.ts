@@ -3,6 +3,7 @@ import {
   BaseError,
   ContractFunctionRevertedError,
   createPublicClient,
+  fallback,
   decodeFunctionData,
   http,
   parseEventLogs,
@@ -11,6 +12,7 @@ import {
 } from "viem";
 import {
   CHAIN,
+  FALLBACK_RPC,
   VAULT_ABI,
   type CaseState,
   type ChainSnapshot,
@@ -57,7 +59,7 @@ const g = globalThis as unknown as {
 const blockTimes = (g.__tanglawTimes ??= new Map());
 
 function getClient(rpc: string) {
-  if (!client) client = createPublicClient({ chain: CHAIN, transport: http(rpc, { retryCount: 1 }) }) as PublicClient;
+  if (!client) client = createPublicClient({ chain: CHAIN, transport: fallback([http(rpc, { retryCount: 1, timeout: 8_000 }), http(FALLBACK_RPC, { retryCount: 1, timeout: 8_000 })]) }) as PublicClient;
   return client;
 }
 

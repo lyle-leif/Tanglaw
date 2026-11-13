@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Avatar, Check, Send } from "@/components/Icons";
-import { chatKey, familyCode, LANGS, replyLang, type ReplyLang } from "@/lib/family";
+import { Avatar, Icon, Send } from "@/components/Icons";
+import { Tracker } from "@/components/Tracker";
+import { chatKey, familyCode, familyName, LANGS, replyLang, type ReplyLang } from "@/lib/family";
 import { peso } from "@/lib/peso";
 import { consolidatedChecklist, PROGRAMS } from "@/lib/rules";
 
@@ -34,6 +36,8 @@ const GREETING: Record<ReplyLang, string> = {
   filipino: "Magandang araw po! Ako si Tulong. Ikuwento po ninyo ang sitwasyon at ang bayarin sa ospital, at sasabihin ko kung anong tulong ang maaari.",
 };
 const CHIPS = ["What should I bring?", "Where is my case?", "Who approves?"];
+// Starter questions on the empty chat screen
+const QUESTIONS = ["What assistance can I apply for?", "What are the requirements?", "Who approves my request?", "How do I track my request?"];
 
 export default function FamilyChat() {
   const router = useRouter();
@@ -44,6 +48,9 @@ export default function FamilyChat() {
   const [thinking, setThinking] = useState(false);
   const [online, setOnline] = useState(true);
   const [settings, setSettings] = useState(false);
+  const [name, setName] = useState("");
+  const [draftLang, setDraftLang] = useState<ReplyLang>("taglish");
+  const [draftName, setDraftName] = useState("");
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
   const box = useRef<HTMLDivElement>(null);
 
@@ -56,6 +63,7 @@ export default function FamilyChat() {
     }
     setCode(c);
     setLang(replyLang.get());
+    setName(familyName.get());
     try {
       const saved = JSON.parse(localStorage.getItem(chatKey(c)) || "[]");
       if (Array.isArray(saved)) setMsgs(saved);
@@ -126,9 +134,18 @@ export default function FamilyChat() {
     send(input);
   }
 
-  function chooseLang(l: ReplyLang) {
-    setLang(l);
-    replyLang.set(l);
+  function openSettings() {
+    setDraftLang(lang);
+    setDraftName(name);
+    setSettings(true);
+  }
+
+  function saveSettings() {
+    setLang(draftLang);
+    replyLang.set(draftLang);
+    familyName.set(draftName);
+    setName(familyName.get());
+    setSettings(false);
   }
 
   function clearChat() {
@@ -142,6 +159,7 @@ export default function FamilyChat() {
   function leaveCase() {
     if (confirm("Leave this case on this phone? You will need the case code to come back.")) {
       familyCode.clear();
+      familyName.clear();
       router.replace("/family");
     }
   }
@@ -149,152 +167,212 @@ export default function FamilyChat() {
   if (!code) return null;
 
   const pill = paid ? (
-    <span className="pill green">✓ Paid</span>
+    <span className="pill green">
+      <Icon name="check" size={13} /> Paid
+    </span>
   ) : started ? (
-    <span className="pill amber">Waiting for approval</span>
-  ) : (
-    <span className="pill gray">New conversation</span>
-  );
+    <span className="pill amber">In review</span>
+  ) : null;
 
   const checklist = consolidatedChecklist();
   // Show each card once, on the first reply that produced it
   const firstCard: Record<string, number> = {};
   msgs.forEach((m, i) => m.cards?.forEach((c) => (firstCard[c] ??= i)));
+  const empty = msgs.length === 0 && !thinking;
 
   return (
     <section className="screen-wrap" aria-label="Family chat">
       <div className="phone">
         <div className="chat-head">
-          <Avatar />
-          <div className="who">
-            <b>Tulong</b>
-            <span>Medical aid helper</span>
-          </div>
-          {pill}
-          <button className="icon-btn" onClick={() => setSettings((s) => !s)} aria-expanded={settings} aria-label="Settings">
-            ⚙
+          <Link href="/" className="circle-btn" aria-label="Back to home">
+            <Icon name="back" />
+          </Link>
+          {empty ? (
+            <span style={{ marginLeft: "auto" }} />
+          ) : (
+            <>
+              <Avatar />
+              <div className="who">
+                <b>Tulong</b>
+                <span>AI helper</span>
+              </div>
+              {pill}
+            </>
+          )}
+          <button className="circle-btn" onClick={openSettings} aria-expanded={settings} aria-label="Settings">
+            <Icon name="gear" />
           </button>
         </div>
 
         {settings && (
-          <div className="settings" role="dialog" aria-label="Settings">
-            <div className="settings-t">Tulong&apos;s language</div>
-            <div className="lang-opts" role="radiogroup" aria-label="Tulong's language">
-              {LANGS.map((l) => (
-                <label key={l.id} className={"lang-opt" + (lang === l.id ? " on" : "")}>
-                  <input type="radio" name="lang" checked={lang === l.id} onChange={() => chooseLang(l.id)} />
-                  <b>{l.label}</b>
-                  <span>{l.sample}</span>
-                </label>
-              ))}
-            </div>
-            <p className="hint" style={{ marginTop: 6 }}>
-              Buttons and labels stay in English. Only Tulong&apos;s replies change.
-            </p>
-            <div className="settings-row">
-              <span className="muted">Case code</span>
-              <b className="mono">{code}</b>
-            </div>
-            <div className="settings-actions">
-              <button className="btn secondary" onClick={clearChat}>
-                Clear conversation
+          <div className="settings" role="dialog" aria-label="AI Chat Settings">
+            <div className="set-head">
+              <button className="circle-btn" onClick={() => setSettings(false)} aria-label="Close settings">
+                <Icon name="back" />
               </button>
-              <button className="btn secondary" onClick={leaveCase}>
-                Leave case
+              <h2>AI Chat Settings</h2>
+            </div>
+            <div className="set-body">
+              <div className="card set-sec">
+                <h3>
+                  <span className="ic">
+                    <Icon name="chat" />
+                  </span>
+                  <span>
+                    Language
+                    <small>Choose how Tulong replies to you</small>
+                  </span>
+                </h3>
+                <div className="lang-opts" role="radiogroup" aria-label="Tulong's language">
+                  {LANGS.map((l) => (
+                    <label key={l.id} className={"lang-opt" + (draftLang === l.id ? " on" : "")}>
+                      <input type="radio" name="lang" checked={draftLang === l.id} onChange={() => setDraftLang(l.id)} />
+                      <b>{l.label}</b>
+                      <span>{l.sample}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="hint">Buttons and labels stay in English. Only Tulong&apos;s replies change.</p>
+              </div>
+              <label className="field" style={{ margin: 0 }}>
+                <span>Your first name (stays on this phone)</span>
+                <input value={draftName} onChange={(e) => setDraftName(e.target.value)} maxLength={40} placeholder="Optional" />
+              </label>
+              <button className="btn primary" onClick={saveSettings}>
+                Save Preference
               </button>
+              <div className="card set-sec">
+                <div className="settings-row">
+                  <span className="muted">Case code</span>
+                  <b className="mono">{code}</b>
+                </div>
+                <div className="settings-actions">
+                  <button className="btn secondary" onClick={clearChat}>
+                    Clear conversation
+                  </button>
+                  <button className="btn secondary" onClick={leaveCase}>
+                    Leave case
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {!online && <div className="offline">No internet. Will retry.</div>}
 
-        <div className="msgs" ref={box} aria-live="polite">
-          <div className="b t">{GREETING[lang]}</div>
-          {msgs.map((m, i) =>
-            m.role === "user" ? (
-              <div key={i} className="b a">
-                {m.text}
-              </div>
-            ) : (
-              <AssistantBlock
-                key={i}
-                m={{ ...m, cards: m.cards?.filter((c) => firstCard[c] === i) }}
-                checklist={checklist}
-                ticked={ticked}
-                setTicked={setTicked}
-              />
-            ),
-          )}
-          {thinking && (
-            <div className="b t" aria-label="Tulong is typing">
-              <span className="typing">
-                <i />
-                <i />
-                <i />
-              </span>{" "}
-              <span className="muted" style={{ fontSize: 14 }}>
-                Tulong is checking the programs…
-              </span>
+        {empty ? (
+          <div className="hello">
+            <h1>
+              Hello{name ? ", " : " "}
+              <span className="underline">{name ? `${name}!` : "po!"}</span>
+            </h1>
+            <p>How can I help you today?</p>
+            <div className="hello-art">
+              <div className="glow" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/mascot/tulong.png" alt="Tulong, the AI helper" />
             </div>
-          )}
-
-          {started && fc && !paid && (
-            <div className="b t wide status-card">
-              <div className="muted" style={{ fontSize: 14 }}>
-                Your case · {fc.coveredPhp > 0 ? "Partly paid" : "Open"}
-              </div>
-              <div className="big num">Remaining: {peso(fc.remainingPhp)}</div>
-              <div className="bar" style={{ margin: "8px 0" }}>
-                <i style={{ width: `${(fc.coveredPhp / fc.billPhp) * 100}%` }} />
-              </div>
-              <div style={{ fontSize: 15 }}>Waiting for approval from the hospital social worker.</div>
-            </div>
-          )}
-          {started && caseErr && !fc && <div className="b t wide note">{(caseErr as Error).message}</div>}
-
-          {started && fc && paid && (
-            <div className="b t wide paid-b status-card" role="status">
-              <div className="ok">
-                <Check />
-                Paid!
-              </div>
-              <div style={{ margin: "6px 0 8px" }}>
-                {peso(fc.coveredPhp)} was paid directly to the hospital. You have nothing left to pay on this bill.
-              </div>
-              <div className="big num" style={{ fontSize: 26 }}>
-                Remaining: ₱0
-              </div>
-              <div className="bar" style={{ margin: "8px 0" }}>
-                <i style={{ width: "100%" }} />
-              </div>
-              {fc.payments.map((p, i) => (
-                <div className="row" key={i}>
-                  <span>
-                    {p.program} <b className="num">{peso(p.amountPhp)}</b>
-                  </span>
-                  <a className="link" href={`/receipt/${p.tx}`} target="_blank" rel="noreferrer">
-                    View receipt ↗
-                  </a>
-                </div>
+            <div className="try">Try asking about:</div>
+            <div className="qgrid">
+              {QUESTIONS.map((q) => (
+                <button key={q} className="q" onClick={() => send(q)}>
+                  {q}
+                </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="msgs" ref={box} aria-live="polite">
+            <BotRow>{GREETING[lang]}</BotRow>
+            {msgs.map((m, i) =>
+              m.role === "user" ? (
+                <div key={i} className="b a">
+                  {m.text}
+                </div>
+              ) : (
+                <AssistantBlock
+                  key={i}
+                  m={{ ...m, cards: m.cards?.filter((c) => firstCard[c] === i) }}
+                  checklist={checklist}
+                  ticked={ticked}
+                  setTicked={setTicked}
+                />
+              ),
+            )}
+            {thinking && (
+              <BotRow label="Tulong is typing">
+                <span className="typing">
+                  <i />
+                  <i />
+                  <i />
+                </span>{" "}
+                <span className="muted" style={{ fontSize: 13 }}>
+                  Tulong is checking the programs…
+                </span>
+              </BotRow>
+            )}
 
-        <div className="chips">
-          {CHIPS.map((c) => (
-            <button key={c} className="chip" onClick={() => send(c)} disabled={thinking}>
-              {c}
-            </button>
-          ))}
-        </div>
+            {started && fc && !paid && (
+              <div className="b t wide status-card">
+                <h4>Your case</h4>
+                <Tracker paid={false} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8 }}>
+                  <span className="muted">{fc.coveredPhp > 0 ? "Partly paid · Remaining" : "Remaining"}</span>
+                  <b className="big num">{peso(fc.remainingPhp)}</b>
+                </div>
+                <div className="note">Waiting for approval from the hospital social worker.</div>
+              </div>
+            )}
+            {started && caseErr && !fc && <div className="b t wide note">{(caseErr as Error).message}</div>}
+
+            {started && fc && paid && (
+              <div className="b t wide paid-b status-card" role="status">
+                <div className="paid-top">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/mascot/brand-wave.png" alt="" />
+                  <div>
+                    <div className="label" style={{ color: "var(--green)" }}>
+                      Paid to the hospital
+                    </div>
+                    <div className="big num poppins">₱0 left</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, marginBottom: 6 }}>
+                  {peso(fc.coveredPhp)} was paid directly to {fc.hospitalLabel || "the hospital"}. You have nothing left to pay on this bill.
+                </div>
+                <Tracker paid />
+                {fc.payments.map((p, i) => (
+                  <div className="row" key={i}>
+                    <span>
+                      {p.program} <b className="num">{peso(p.amountPhp)}</b>
+                    </span>
+                    <a className="link" href={`/receipt/${p.tx}`} target="_blank" rel="noreferrer">
+                      View receipt
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!empty && (
+          <div className="chips">
+            {CHIPS.map((c) => (
+              <button key={c} className="chip" onClick={() => send(c)} disabled={thinking}>
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
         <form className="composer" onSubmit={onSubmit}>
           <label className="sr" htmlFor="cin">
             Message
           </label>
           <input
             id="cin"
-            placeholder="Type a message…"
+            placeholder="Ask me anything…"
             autoComplete="off"
             value={input}
             maxLength={1000}
@@ -307,6 +385,17 @@ export default function FamilyChat() {
         <div className="privacy">Please don&apos;t share full names or diagnoses.</div>
       </div>
     </section>
+  );
+}
+
+function BotRow({ children, label }: { children: React.ReactNode; label?: string }) {
+  return (
+    <div className="trow" aria-label={label}>
+      <Avatar size={30} />
+      <div className="b t" style={{ whiteSpace: "pre-wrap" }}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -323,12 +412,12 @@ function AssistantBlock({
 }) {
   return (
     <>
-      <div className="b t" style={{ whiteSpace: "pre-wrap" }}>
-        {m.text}
-      </div>
+      <BotRow>{m.text}</BotRow>
       {m.cards?.includes("programs") && (
         <div className="b t wide">
-          <h4>Programs that may help</h4>
+          <h4>
+            <Icon name="shield" size={18} /> Programs that may help
+          </h4>
           {PROGRAMS.map((p, i) => (
             <div className="prog" key={p.key}>
               <span className="n">{i + 1}</span>
@@ -343,7 +432,9 @@ function AssistantBlock({
       )}
       {m.cards?.includes("checklist") && (
         <div className="b t wide">
-          <h4>One checklist for all programs</h4>
+          <h4>
+            <Icon name="file" size={18} /> One checklist for all programs
+          </h4>
           <ul className="check">
             {checklist.map((t, i) => (
               <li key={i}>

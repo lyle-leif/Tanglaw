@@ -34,6 +34,14 @@ export const familyCode = {
   clear: () => set(CODE_KEY, null),
 };
 
+// Optional first name, only for Tulong's greeting. Stays on this phone: never sent to the server or the AI.
+const NAME_KEY = "tanglaw.family.name";
+export const familyName = {
+  get: () => (get(NAME_KEY) ?? "").trim(),
+  set: (n: string) => set(NAME_KEY, n.trim().slice(0, 40) || null),
+  clear: () => set(NAME_KEY, null),
+};
+
 export const replyLang = {
   get: (): ReplyLang => {
     const v = get(LANG_KEY);

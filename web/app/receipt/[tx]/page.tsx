@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { parseEventLogs } from "viem";
 import { usePublicClient } from "wagmi";
+import { Icon } from "@/components/Icons";
 import { CHAIN, VAULT_ABI, addrUrl, txUrl } from "@/lib/chain";
 import { peso, short, weiToPeso } from "@/lib/peso";
 import { planHash, type Plan } from "@/lib/plan";
@@ -82,20 +83,19 @@ export default function ReceiptPage() {
   return (
     <div className="rcpt">
       <div className="card rcpt-card">
-        <div className="rcpt-head">
+        <div className="rcpt-band">
           <div>
-            <div className="sec-t">Tanglaw · Payment receipt</div>
+            <div className="label">Paid to the hospital</div>
             <h1 className="num">{onchain ? peso(total) : "…"}</h1>
-            <p className="muted" style={{ margin: 0 }}>
-              Paid directly to {snap?.hospitalLabel ?? "the hospital"}
+            <div style={{ fontSize: 14 }}>
+              {snap?.hospitalLabel ?? "The hospital"} · BSC testnet
               {time.data ? ` · ${new Date(time.data * 1000).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}` : ""}
-            </p>
+            </div>
           </div>
-          <button className="btn secondary no-print" onClick={() => window.print()}>
-            Print
-          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot/brand-wave.png" alt="" />
         </div>
-
+        <div className="rcpt-body">
         {chain.isLoading || (!chain.data && !chain.error) ? (
           <>
             <div className="skel" style={{ margin: "18px 0 10px" }} />
@@ -134,7 +134,7 @@ export default function ReceiptPage() {
                   <span className="muted">Checking the approved plan against the blockchain…</span>
                 ) : matches ? (
                   <>
-                    <div className="vh">✓ Plan matches the blockchain</div>
+                    <div className="vh">Plan matches the blockchain</div>
                     <div>
                       The plan the social worker approved gives the same fingerprint the contract stored with this payment. Nobody
                       changed it after approval.
@@ -183,9 +183,21 @@ export default function ReceiptPage() {
                 <dt>Network</dt>
                 <dd>BSC Testnet · test funds, not a real disbursement</dd>
               </dl>
+              <div className="rcpt-actions no-print">
+                <button className="btn secondary" onClick={() => window.print()}>
+                  <Icon name="print" size={16} /> Print
+                </button>
+                <button className="btn secondary" onClick={() => navigator.clipboard?.writeText(window.location.href)}>
+                  <Icon name="link" size={16} /> Copy link
+                </button>
+                <a className="btn outline" href={txUrl(tx)} target="_blank" rel="noreferrer">
+                  View on BscScan <Icon name="ext" size={14} />
+                </a>
+              </div>
             </>
           )
         )}
+        </div>
       </div>
       <p className="foot-note no-print">
         <Link className="link" href="/activity">
