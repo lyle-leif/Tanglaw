@@ -224,7 +224,7 @@ details.proves summary{font-weight:600;cursor:pointer}
 /* Home */
 .home{max-width:960px;margin:0 auto;padding:40px 20px 56px}
 .home-hero{text-align:center;margin-bottom:28px}
-.home-hero svg{width:56px;height:56px}
+/* (old home logo rule removed: it enlarged every icon in the new hero) */
 .home-hero h1{font-size:34px;margin:8px 0 4px}
 .home-hero p{color:var(--muted);font-size:17px;margin:0}
 .home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
