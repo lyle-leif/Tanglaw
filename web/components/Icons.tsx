@@ -1,9 +1,15 @@
 // Icons copied from design/prototype.html
 
+// Tanglaw mark: amber check-shaped wing with a red-orange tail (traced from the owner's logo)
+export const LOGO_PATHS = {
+  wing: "M332 231 L470 246 C502 250 527 267 544 293 L640 461 C647 475 654 487 668 477 L872 307 C897 287 922 282 947 292 C977 305 990 335 989 370 L989 483 C988 525 970 563 934 593 L592 853 C567 870 537 861 520 833 L260 347 C242 313 250 277 277 253 C294 238 312 231 332 231 Z",
+  tail: "M380 657 L489 850 C500 870 495 895 480 911 C462 930 392 970 342 1000 C302 1023 252 1017 230 980 C214 953 212 925 212 895 L212 850 C214 795 237 760 277 733 Z",
+};
+
 export const Logo = ({ size = 30 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
-    <path d="M20 3c3 6 11 9 11 18a11 11 0 0 1-22 0c0-5 3-8 5-10 0 4 2 6 4 6-2-6 0-10 2-14z" fill="#F07A22" />
-    <path d="M20 19c2 3 5 4 5 8a5 5 0 0 1-10 0c0-3 2-5 3-6 0 2 1 3 2 3-.6-2 0-3.5 0-5z" fill="#F6C445" />
+  <svg width={size} height={size} viewBox="200 220 800 800" aria-hidden="true">
+    <path d={LOGO_PATHS.wing} fill="#FCA004" />
+    <path d={LOGO_PATHS.tail} fill="#F2600A" />
   </svg>
 );
 
