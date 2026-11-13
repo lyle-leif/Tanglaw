@@ -1,14 +1,18 @@
 "use client";
 
-import { addrUrl, txUrl } from "@/lib/chain";
+import Link from "next/link";
+import { addrUrl, refusalReason, txUrl } from "@/lib/chain";
 import { peso, short } from "@/lib/peso";
 import { useSnapshot } from "@/lib/useSnapshot";
 
-// Public record: every Paid event from the vault. Program, amount, hospital, receipt. No names.
+// Public record: every Paid event from the vault, and every payment the contract refused.
+// Program, amount, hospital, receipt. No names.
 
 export default function ActivityPage() {
   const { data: snap, isLoading, error } = useSnapshot(6000);
   const pays = snap?.payments ?? [];
+  const refusals = snap?.refusals ?? [];
+  const progName = (id: number) => snap?.programs.find((x) => x.id === id)?.name;
   const total = pays.reduce((a, p) => a + p.amountPhp, 0);
   const nCases = new Set(pays.map((p) => p.caseId)).size;
   const loading = isLoading && !snap;
@@ -18,8 +22,16 @@ export default function ActivityPage() {
       <div className="act-hero">
         <div>
           <h1>Every peso, in public.</h1>
+          <div className="counter num" aria-live="polite">
+            <span className="paid">
+              <b>{peso(total)}</b> paid
+            </span>
+            <span className="refused">
+              <b>{refusals.length}</b> refused by the rules
+            </span>
+          </div>
           <p className="num">
-            {peso(total)} paid · {nCases} case{nCases === 1 ? "" : "s"} · {pays.length ? 1 : 0} hospital · No names. Case IDs are random.
+            {nCases} case{nCases === 1 ? "" : "s"} paid · {pays.length ? 1 : 0} hospital · No names. Case IDs are random.
           </p>
         </div>
         <span className="pill navy">Public record · BSC Testnet</span>
@@ -107,8 +119,12 @@ export default function ActivityPage() {
                   </td>
                   <td>{snap?.hospitalLabel}</td>
                   <td>
+                    <Link className="link" href={`/receipt/${p.tx}`}>
+                      Receipt
+                    </Link>
+                    {" · "}
                     <a className="link" href={txUrl(p.tx)} target="_blank" rel="noreferrer">
-                      View on BscScan ↗
+                      BscScan ↗
                     </a>
                   </td>
                 </tr>
@@ -117,8 +133,67 @@ export default function ActivityPage() {
           </tbody>
         </table>
       </section>
+      <section className="card receipts refusals">
+        <div className="sec-t" style={{ padding: "14px 16px 0" }}>
+          Refused by the rules
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Case</th>
+              <th>Asked for</th>
+              <th>Why the contract said no</th>
+              <th>Proof</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5}>
+                  <div className="skel" style={{ margin: "6px 0" }} />
+                </td>
+              </tr>
+            ) : !refusals.length ? (
+              <tr>
+                <td colSpan={5} className="empty">
+                  Nothing refused yet. If a plan breaks a rule, the contract stops it and it shows here. No money moves.
+                </td>
+              </tr>
+            ) : (
+              refusals.map((x) => {
+                const bad = x.lines.find((l) => l.amountPhp > (snap?.programs.find((p) => p.id === l.programId)?.capPhp ?? Infinity));
+                return (
+                  <tr key={x.tx}>
+                    <td className="num">{x.time ? new Date(x.time * 1000).toTimeString().slice(0, 5) : "—"}</td>
+                    <td className="mono">{short(x.caseId)}</td>
+                    <td className="num">
+                      {x.lines.map((l, i) => (
+                        <div key={i}>
+                          {progName(l.programId)} <b>{peso(l.amountPhp)}</b>
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      <span className="pill red">✕ Refused</span> {refusalReason(x.err, progName((bad ?? x.lines[0])?.programId))}{" "}
+                      <span className="mono muted">{x.err}</span>
+                    </td>
+                    <td>
+                      <a className="link" href={txUrl(x.tx)} target="_blank" rel="noreferrer">
+                        Failed tx ↗
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </section>
+
       <p className="foot-note">
-        Refused attempts aren&apos;t listed: the contract records nothing when it refuses a payment.
+        A refused payment leaves no event on the chain, only a failed transaction. Refusals sent through this app are
+        listed above; each links to its failed transaction on BscScan, where no money moved.
         {snap?.vault && (
           <>
             {" "}

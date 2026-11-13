@@ -85,7 +85,43 @@ export interface ChainSnapshot {
   programs: ProgramState[];
   cases: CaseState[];
   payments: PaymentRow[];
+  refusals: RefusalRow[];
   error?: string;
+}
+
+/** An approveAndPay that reached the chain and was reverted by the contract's rules. */
+export interface RefusalRow {
+  caseId: `0x${string}`;
+  lines: { programId: number; amountPhp: number }[];
+  err: string; // contract error name, e.g. OverProgramCap
+  tx: string;
+  block: string;
+  time: number | null;
+}
+
+/** Short public wording for a refusal (activity page). No amounts the reader can't check on BscScan. */
+export function refusalReason(err: string, program?: string): string {
+  const p = program ?? "a program";
+  switch (err) {
+    case "OverProgramCap":
+      return `Over ${p}'s per-case cap`;
+    case "OverBudget":
+      return `${p} has no budget left for this`;
+    case "OverBill":
+      return "More than the hospital bill";
+    case "InactiveProgram":
+      return `${p} isn't active`;
+    case "ZeroAmount":
+      return "A line had no amount";
+    case "Paused":
+      return "Payments were paused";
+    case "NotSocialWorker":
+      return "Not signed by the social worker";
+    case "CaseNotFound":
+      return "Case not open";
+    default:
+      return "Refused by the contract";
+  }
 }
 
 // ---------- contract error -> plain words (staff screen only; Ana never sees refusals) ----------

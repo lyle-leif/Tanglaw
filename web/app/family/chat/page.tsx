@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Avatar, Check, Send } from "@/components/Icons";
-import { txUrl } from "@/lib/chain";
 import { chatKey, familyCode, LANGS, replyLang, type ReplyLang } from "@/lib/family";
 import { peso } from "@/lib/peso";
 import { consolidatedChecklist, PROGRAMS } from "@/lib/rules";
@@ -273,7 +272,7 @@ export default function FamilyChat() {
                   <span>
                     {p.program} <b className="num">{peso(p.amountPhp)}</b>
                   </span>
-                  <a className="link" href={txUrl(p.tx)} target="_blank" rel="noreferrer">
+                  <a className="link" href={`/receipt/${p.tx}`} target="_blank" rel="noreferrer">
                     View receipt ↗
                   </a>
                 </div>

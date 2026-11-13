@@ -1,6 +1,23 @@
 import "server-only";
-import { createPublicClient, http, parseEventLogs, type Log, type PublicClient } from "viem";
-import { CHAIN, VAULT_ABI, type CaseState, type ChainSnapshot, type PaymentRow, type ProgramState } from "../chain";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  createPublicClient,
+  decodeFunctionData,
+  http,
+  parseEventLogs,
+  type Log,
+  type PublicClient,
+} from "viem";
+import {
+  CHAIN,
+  VAULT_ABI,
+  type CaseState,
+  type ChainSnapshot,
+  type PaymentRow,
+  type ProgramState,
+  type RefusalRow,
+} from "../chain";
 import { weiToPeso } from "../peso";
 import { PROGRAMS } from "../rules";
 import { getConfig } from "./config";
@@ -113,7 +130,10 @@ export async function recordTx(hash: `0x${string}`): Promise<{ ok: boolean; erro
     return { ok: false, error: "Couldn't get the receipt for this transaction." };
   }
   if (receipt.to?.toLowerCase() !== cfg.vault.toLowerCase()) return { ok: false, error: "Not a vault transaction." };
-  if (receipt.status !== "success") return { ok: true }; // reverted: nothing happened on-chain
+  if (receipt.status !== "success") {
+    await recordRefusal(c, hash, receipt.blockNumber);
+    return { ok: true };
+  }
   const vaultLogs = receipt.logs.filter((l) => l.address.toLowerCase() === cfg.vault!.toLowerCase());
   const block = String(receipt.blockNumber);
   const time = await blockTime(c, block);
@@ -136,6 +156,53 @@ export async function recordTx(hash: `0x${string}`): Promise<{ ok: boolean; erro
   return { ok: true };
 }
 
+/**
+ * A reverted approveAndPay leaves no event, only a failed receipt. Decode what was asked from the
+ * transaction input, and get the contract's error name by replaying the same call on the state just
+ * before that block. Both come from the chain.
+ */
+async function recordRefusal(c: PublicClient, hash: `0x${string}`, blockNumber: bigint) {
+  if (store.hasRefused(hash)) return;
+  const tx = await c.getTransaction({ hash });
+  let decoded;
+  try {
+    decoded = decodeFunctionData({ abi: VAULT_ABI, data: tx.input });
+  } catch {
+    return;
+  }
+  if (decoded.functionName !== "approveAndPay") return;
+  const [caseId, programIds, amounts] = decoded.args as readonly [`0x${string}`, readonly number[], readonly bigint[], `0x${string}`];
+  // Replay on the state just before the block. Public nodes keep only recent state ("missing trie
+  // node"), so for an older tx fall back to the current state, which gives the same answer unless
+  // the case or budgets changed since.
+  const replay = async (at?: bigint) => {
+    try {
+      await c.simulateContract({
+        address: tx.to!,
+        abi: VAULT_ABI,
+        functionName: "approveAndPay",
+        args: decoded.args as never,
+        account: tx.from,
+        ...(at !== undefined ? { blockNumber: at } : {}),
+      });
+      return null;
+    } catch (e) {
+      const rev = e instanceof BaseError ? e.walk((x) => x instanceof ContractFunctionRevertedError) : null;
+      return (rev as ContractFunctionRevertedError | null)?.data?.errorName ?? null;
+    }
+  };
+  const err = (await replay(blockNumber - 1n)) ?? (await replay()) ?? "Reverted";
+  const block = String(blockNumber);
+  store.putRefused({
+    caseId,
+    lines: programIds.map((id, i) => ({ programId: Number(id), amountPhp: weiToPeso(amounts[i]) })),
+    err,
+    tx: hash,
+    block,
+    time: await blockTime(c, block),
+  });
+}
+
 export async function snapshot(): Promise<ChainSnapshot> {
   const cfg = getConfig();
   const empty: ChainSnapshot = {
@@ -148,6 +215,7 @@ export async function snapshot(): Promise<ChainSnapshot> {
     programs: PROGRAMS.map((p) => ({ id: p.id, name: p.name, capPhp: p.capPhp, budgetLeftPhp: p.budgetPhp, active: true })),
     cases: [],
     payments: [],
+    refusals: [],
   };
   if (!cfg.vault) return { ...empty, error: "No vault address yet. Deploy the contract, then restart the app." };
 
@@ -234,7 +302,23 @@ export async function snapshot(): Promise<ChainSnapshot> {
       ([...st.hospitals.entries()].filter(([, ok]) => ok).map(([a]) => a).pop() as `0x${string}` | undefined) ??
       (envHospital && (await read<boolean>("isHospital", [envHospital])) ? envHospital : null);
 
-    return { configured: true, vault: v, socialWorker: sw, hospital, hospitalLabel: cfg.hospitalLabel, paused, programs, cases, payments };
+    const refusals: RefusalRow[] = store
+      .allRefused()
+      .filter((x) => cases.some((cs) => cs.caseId.toLowerCase() === x.caseId.toLowerCase()))
+      .sort((a, b) => Number(BigInt(b.block) - BigInt(a.block)));
+
+    return {
+      configured: true,
+      vault: v,
+      socialWorker: sw,
+      hospital,
+      hospitalLabel: cfg.hospitalLabel,
+      paused,
+      programs,
+      cases,
+      payments,
+      refusals,
+    };
   } catch (e) {
     return { ...empty, vault: cfg.vault, error: "Couldn't read BSC testnet: " + (e as Error).message.split("\n")[0] };
   }

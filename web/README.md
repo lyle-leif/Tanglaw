@@ -7,7 +7,8 @@ Next.js (App Router) + wagmi/viem. Tulong (the AI) runs on free tiers: Gemini fi
 | `/` | Everyone | none | Pick: family, social worker, or public record. |
 | `/family` → `/family/chat` | Ana (family) | **Case code** from the social worker (`TGL-XXX-XXX`), saved on her phone | Chat with Tulong, program and checklist cards, her own case's status and the paid card. Only her case. ⚙ Settings: Tulong's language, clear chat, leave case. No wallet. |
 | `/staff` | Ma'am Liza (social worker) | **MetaMask**: she signs a free one-time message; the server checks the wallet is the contract's `socialWorker` and sets an 8-hour cookie | Opens cases (types the bill, optional memo) and gets the family code to give Ana, asks Tulong to draft, edits amounts, signs `approveAndPay`. |
-| `/activity` | Public | none | Every `Paid` event, budgets left per program, BscScan links. No names. |
+| `/activity` | Public | none | Counter ("₱X paid · Y refused by the rules"), every `Paid` event, every refused payment with the contract's reason and its failed tx, budgets left per program, BscScan links. No names. |
+| `/receipt/[tx]` | Public (Ana's "View receipt") | none | One payment: lines, hospital, time, printable. **✓ Plan matches the blockchain**: the browser reads the receipt straight from BSC testnet and compares the on-chain `planHash` with the fingerprint of the approved plan. |
 
 Only the social worker has a wallet because only she approves payments, and the contract checks her address. The family never signs anything. Old paths `/chat` and `/review` redirect to the new ones.
 

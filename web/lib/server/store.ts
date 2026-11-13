@@ -1,7 +1,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import type { PaymentRow } from "../chain";
+import type { PaymentRow, RefusalRow } from "../chain";
 import type { Plan } from "../plan";
 
 // Off-chain demo data: case salts and memos, Tulong's drafts and every plan keyed by its hash.
@@ -25,6 +25,7 @@ interface StoreShape {
   // public RPCs that refuse eth_getLogs. Each row is decoded from the chain, never typed by a user.
   openedTx: Record<string, { tx: string; block: string }>; // caseId -> openCase tx
   paid: Record<string, PaymentRow>; // "tx:logIndex" -> Paid event
+  refused: Record<string, RefusalRow>; // tx -> reverted approveAndPay (decoded from the tx and a replay)
 }
 
 const FILE = path.join(process.cwd(), ".data", "store.json");
@@ -32,17 +33,23 @@ const FILE = path.join(process.cwd(), ".data", "store.json");
 const g = globalThis as unknown as { __tanglawStore?: StoreShape };
 
 function load(): StoreShape {
-  if (g.__tanglawStore) return g.__tanglawStore;
-  let s: StoreShape;
-  try {
-    s = JSON.parse(fs.readFileSync(FILE, "utf8")) as StoreShape;
-  } catch {
-    s = { cases: {}, drafts: {}, plans: {}, codes: {}, openedTx: {}, paid: {} };
+  let s = g.__tanglawStore;
+  if (!s) {
+    try {
+      s = JSON.parse(fs.readFileSync(FILE, "utf8")) as StoreShape;
+    } catch {
+      s = {} as StoreShape;
+    }
+    g.__tanglawStore = s;
   }
+  // Fill sections added in later versions (also for a copy kept in memory across a hot reload)
+  s.cases ??= {};
+  s.drafts ??= {};
+  s.plans ??= {};
   s.codes ??= {};
   s.openedTx ??= {};
   s.paid ??= {};
-  g.__tanglawStore = s;
+  s.refused ??= {};
   return s;
 }
 
@@ -86,6 +93,16 @@ export const store = {
   allPaid: () => Object.values(load().paid),
   putPaid(id: string, row: PaymentRow) {
     load().paid[id] = row;
+    save();
+  },
+  allRefused: () => Object.values(load().refused),
+  /** true once a refusal is saved with a known error name ("Reverted" means: try again) */
+  hasRefused: (tx: string) => {
+    const r = load().refused[tx.toLowerCase()];
+    return !!r && r.err !== "Reverted";
+  },
+  putRefused(row: RefusalRow) {
+    load().refused[row.tx.toLowerCase()] = row;
     save();
   },
   getPlan: (hash: string) => load().plans[hash.toLowerCase()],

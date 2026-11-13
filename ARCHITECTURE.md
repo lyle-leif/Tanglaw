@@ -49,7 +49,8 @@ Key rule: **only Ma'am Liza's wallet can move money**, and only through the cont
 | Everyone | `/` | none | no | Choose a role |
 | Family (Ana) | `/family` → `/family/chat` | Case code `TGL-XXX-XXX`, kept in the phone's browser | no | Chat with Tulong, see programs + one checklist, follow **only her own case**, choose Tulong's reply language (⚙: Taglish, English, Filipino) |
 | Social worker (Ma'am Liza) | `/staff` | Signs a free one-time message in MetaMask; server checks the wallet is the contract's `socialWorker`; 8-hour cookie | yes | Open cases (types the bill), give the family code, ask Tulong for a plan, edit amounts, sign payments |
-| Public | `/activity` | none | no | See every payment, program budgets left, BscScan proof. No names |
+| Public | `/activity` | none | no | See every payment and every refused payment (with the contract's reason), program budgets left, BscScan proof. No names |
+| Anyone with the link | `/receipt/<tx>` | none | no | One payment's receipt, printable, with a "plan matches the blockchain" check run in the browser |
 
 All buttons and labels are English. Only Tulong's replies follow the family's language setting.
 
@@ -141,7 +142,7 @@ web/
 | `GET /api/staff/nonce`, `POST /api/staff/login`, `POST /api/staff/logout`, `GET /api/staff/me` | staff | Sign-in |
 | `POST /api/cases`, `GET /api/cases` | staff | Save case salt + memo, create family code; list codes |
 | `GET /api/plans?caseId=` / `?hash=` / `POST` | staff / public by hash | Stored plans |
-| `POST /api/tx` | staff | After a signed tx is mined: reads its receipt from the chain and saves the vault's events (free RPCs refuse `eth_getLogs`) |
+| `POST /api/tx` | public (only chain-confirmed data is saved) | After a vault tx is mined: reads its receipt and saves the vault's events. For a reverted `approveAndPay`: decodes the request from the tx input and gets the contract's error by replaying the call (free RPCs refuse `eth_getLogs`, and refusals leave no event) |
 
 Staff-only routes return 401 without the sign-in cookie.
 
@@ -171,7 +172,7 @@ flowchart LR
 | Case ID (random), `caseHash`, bill, hospital, payments, program budgets | Blockchain | Yes |
 | `planHash` (fingerprint of the approved plan) | Blockchain | Yes |
 | Case salt, memo, family code, Tulong's drafts, plans by hash | `web/.data/store.json` (gitignored) | No |
-| Copies of `CaseOpened` / `Paid` events, decoded from tx receipts | `web/.data/store.json` | The same data is public on-chain |
+| Copies of `CaseOpened` / `Paid` events and refused `approveAndPay` requests, decoded from the chain | `web/.data/store.json` | The same data is public on-chain |
 | Ana's chat history, family code, language | Ana's browser (localStorage) | No |
 | Staff session | Signed cookie in Ma'am Liza's browser | No |
 | API keys, deployer key | `.env` on the owner's laptop (gitignored) | No |

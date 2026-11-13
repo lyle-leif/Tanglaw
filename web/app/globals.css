@@ -259,3 +259,43 @@ details.proves summary{font-weight:600;cursor:pointer}
 .code-display{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:16px 18px;margin-bottom:16px;border-color:var(--amber);background:var(--amber-wash)}
 .code-big{font-size:30px!important;font-weight:700;letter-spacing:.08em;margin:4px 0}
 .code-actions{display:flex;gap:8px;align-items:center}
+
+/* ---------- ACTIVITY: counter + refusals ---------- */
+.pill.red{background:var(--red-wash);color:var(--red-ink)}
+.counter{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px}
+.counter span{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-radius:999px;font-size:15px}
+.counter b{font:700 20px Poppins,sans-serif}
+.counter .paid{background:var(--green-wash);color:var(--green-ink)}
+.counter .refused{background:var(--red-wash);color:var(--red-ink)}
+.receipts{overflow-x:auto}
+.refusals{margin-top:16px}
+
+/* ---------- RECEIPT ---------- */
+.rcpt{max-width:640px;margin:0 auto;padding:0 16px}
+.rcpt-card{padding:20px 22px}
+.rcpt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.rcpt-head h1{font-size:36px;margin:4px 0}
+.rcpt-lines{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:16px}
+.rcpt-lines td{padding:10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.rcpt-lines .amt{text-align:right;font-weight:700;white-space:nowrap;padding-left:12px}
+.rcpt-lines .tot td{border-bottom:0;font-weight:700}
+.rcpt-reason{font-size:14px;margin-top:2px}
+.verify{border-radius:12px;padding:14px 16px;background:var(--soft);font-size:15px}
+.verify.ok{background:var(--green-wash);border-left:5px solid var(--green)}
+.verify.bad{background:var(--red-wash);border-left:5px solid var(--red)}
+.verify .vh{font:700 17px Poppins,sans-serif;margin-bottom:4px}
+.verify.ok .vh{color:var(--green-ink)}
+.verify.bad .vh{color:var(--red-ink)}
+.hashes{margin:10px 0 0;font-size:12px;word-break:break-all}
+.hashes dt{color:var(--muted);margin-top:6px}
+.hashes dd{margin:0}
+.verify .how{font-size:13px;margin:10px 0 0}
+.rcpt-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:16px 0 0;font-size:14px}
+.rcpt-meta dt{color:var(--muted)}
+.rcpt-meta dd{margin:0}
+@media (max-width:640px){.rcpt-head h1{font-size:28px}.rcpt-card{padding:16px}}
+@media print{
+  .banner,.top,.no-print{display:none!important}
+  body{background:#fff}
+  .rcpt-card{box-shadow:none;border:1px solid #ccc}
+}
