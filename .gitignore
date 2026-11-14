@@ -10,3 +10,6 @@ broadcast/
 .data/
 next-env.d.ts
 *.tsbuildinfo
+
+# Local Claude Code settings
+.claude/

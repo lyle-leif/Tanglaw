@@ -174,5 +174,9 @@ PRD.md            Product requirements: problem, users, goals
 MIGRATION.md      Build spec and build status
 ARCHITECTURE.md   System design and security boundaries
 WALLET_SETUP.md   MetaMask setup for BSC Testnet
+LICENSE           MIT License
 ```
 
+## License
+
+Released under the [MIT License](LICENSE). The contract source already carries the matching `SPDX-License-Identifier: MIT` header.
