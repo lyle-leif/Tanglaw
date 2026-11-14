@@ -176,6 +176,3 @@ ARCHITECTURE.md   System design and security boundaries
 WALLET_SETUP.md   MetaMask setup for BSC Testnet
 ```
 
-## Team
-
-Three members: a builder (contract, AI and web app), a pitch lead (deck, demo and research) and a support member (logo and wallet setup).
