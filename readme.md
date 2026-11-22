@@ -57,6 +57,19 @@ What Maria sees on her phone. Captured from the running app against the live tes
   </tr>
 </table>
 
+## Screenshots: the scholarship officer and the public
+
+**Scholarship officer dashboard.** The officer's cases, the assessment the officer entered, Tulong's drafted plan with a reason and rule source per line, the payee fixed by the contract, and the paid result after one MetaMask signature.
+
+<p align="center"><img src="docs/screenshots/officer-1-dashboard.png" alt="Scholarship officer dashboard: Case E paid, CHED TES 20,000, City Scholarship 10,000, Alumni Grant 8,000, remaining zero" width="820"></p>
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/screenshots/public-1-record.png" alt="Public record: total paid to schools, cases paid, refusals, program budgets and receipts, no names" width="400"><br><sub><b>Public record</b><br>Every payment and refusal, budgets left, no names</sub></td>
+    <td align="center" width="50%"><img src="docs/screenshots/public-2-receipt.png" alt="Receipt for Case A with the plan fingerprint matching the blockchain" width="400"><br><sub><b>Receipt</b><br>The approved plan matches the fingerprint on-chain</sub></td>
+  </tr>
+</table>
+
 ## Architecture
 
 ```mermaid
