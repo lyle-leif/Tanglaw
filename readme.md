@@ -43,6 +43,20 @@ The core principle: **the prompt is a suggestion; the contract is the law.** Eve
 
 The school cashier has no screen. Payments arrive in its wallet and appear on the public record under a school label.
 
+## Screenshots: the student app
+
+What Maria sees on her phone. Captured from the running app against the live testnet vault; Tulong's replies are real output.
+
+<table>
+  <tr>
+    <td align="center" width="20%"><img src="docs/screenshots/student-1-case-code.png" alt="Case code sign-in screen" width="170"><br><sub><b>1. Enter the case code</b><br>No account, no wallet</sub></td>
+    <td align="center" width="20%"><img src="docs/screenshots/student-2-welcome.png" alt="Tulong welcome screen with starter questions" width="170"><br><sub><b>2. Meet Tulong</b><br>Starter questions</sub></td>
+    <td align="center" width="20%"><img src="docs/screenshots/student-3-tulong.png" alt="Tulong explains how the three scholarships stack, in Taglish" width="170"><br><sub><b>3. Ask in Taglish</b><br>How the scholarships stack</sub></td>
+    <td align="center" width="20%"><img src="docs/screenshots/student-4-checklist.png" alt="One checklist for all programs and the case tracker" width="170"><br><sub><b>4. One checklist</b><br>Case tracker: in review</sub></td>
+    <td align="center" width="20%"><img src="docs/screenshots/student-5-paid.png" alt="Paid to the school, zero left, with receipts per program" width="170"><br><sub><b>5. Paid to the school</b><br>₱0 left, receipts per program</sub></td>
+  </tr>
+</table>
+
 ## Architecture
 
 ```mermaid
@@ -170,6 +184,7 @@ Signing in as the scholarship officer requires the wallet set as `officer` in th
 contracts/        TanglawVault.sol, 14 tests, deploy script (Foundry)
 web/              Next.js app: student chat, staff dashboard, public activity, receipts, Tulong module
 design/           UX spec (DESIGN.md) and clickable prototype
+docs/screenshots/ Phone screenshots used in this README
 PRD.md            Product requirements: problem, users, goals
 MIGRATION.md      Build spec and build status
 ARCHITECTURE.md   System design and security boundaries
