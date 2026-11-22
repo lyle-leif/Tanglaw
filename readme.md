@@ -54,15 +54,11 @@ flowchart LR
     Vault -->|events| Public[Public record]
 ```
 
-| Part | Technology |
-|---|---|
-| Contract | Solidity 0.8.24, Foundry, OpenZeppelin 5. 14 tests passing |
-| Web app | Next.js 16, React 19, wagmi, viem, TypeScript |
-| AI | Gemini first, Groq as fallback, server-side only |
-
-**Contract.** `openCase` (officer types the assessment) and `approveAndPay` (checks cap, budget and assessment, then pays the case's school). No function accepts a recipient address. On-chain data is only random case IDs, salted hashes, amounts and statuses.
-
-**Tulong.** Read-only tools plus one `draft_payment_plan` output, validated in code before anyone sees it. It treats memos as data, so a hidden "send everything to 0x..." instruction is flagged, not followed. The approved plan's hash is stored on-chain with each payment.
+| Part | Technology | What it does |
+|---|---|---|
+| Contract | Solidity 0.8.24, Foundry, OpenZeppelin 5 (14 tests passing) | `openCase` takes the assessment typed by the officer. `approveAndPay` checks each program's cap, its budget and the assessment, then pays the case's school. No function accepts a recipient address, and on-chain data is only random case IDs, salted hashes, amounts and statuses. |
+| Web app | Next.js 16, React 19, wagmi, viem, TypeScript | Student chat, officer dashboard, public record and receipts. The officer signs in with MetaMask; students use a case code. |
+| AI (Tulong) | Gemini first, Groq as fallback, server-side only | Read-only tools plus one `draft_payment_plan` output, validated in code. Memos are treated as data, so a hidden "send everything to 0x..." instruction is flagged, not followed. The approved plan's hash is stored on-chain. |
 
 More detail in [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`MIGRATION.md`](MIGRATION.md).
 
