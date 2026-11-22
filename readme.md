@@ -63,6 +63,10 @@ What Maria sees on her phone. Captured from the running app against the live tes
 
 <p align="center"><img src="docs/screenshots/officer-1-dashboard.png" alt="Scholarship officer dashboard: Case E paid, CHED TES 20,000, City Scholarship 10,000, Alumni Grant 8,000, remaining zero" width="820"></p>
 
+**Opening a case.** The officer enters the assessment and gets a one-time student code to hand to the student. The case starts in review with no plan until Tulong drafts one.
+
+<p align="center"><img src="docs/screenshots/officer-2-case-opened.png" alt="Case F opened with student code TGL-RBS-Z85, assessment 38,000, no plan yet, Draft with Tulong button" width="820"></p>
+
 <table>
   <tr>
     <td align="center" width="50%"><img src="docs/screenshots/public-1-record.png" alt="Public record: total paid to schools, cases paid, refusals, program budgets and receipts, no names" width="400"><br><sub><b>Public record</b><br>Every payment and refusal, budgets left, no names</sub></td>
